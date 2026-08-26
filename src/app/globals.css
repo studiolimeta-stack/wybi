@@ -1,0 +1,235 @@
+@import 'tailwindcss';
+
+/*
+ * Brand tokens. Every colour here is checked against the paper background at
+ * the size it is actually used; the ratio in each comment is the measured
+ * WCAG value, so a future edit that darkens or brightens a hue has something
+ * to check itself against.
+ *
+ * Several brand hues exist in two versions: a saturated one for fills and a
+ * darker one for text and icons. The bright brand green (#22c58e) is 2.1:1 on
+ * paper — fine behind a bar, unreadable as a word. Reaching for the fill token
+ * when you mean the text token is the easiest mistake to make here.
+ */
+@theme {
+  --color-paper: #fff8f0;
+  --color-ink: #0f172a;   /* 16.9:1 on paper */
+  --color-muted: #5a6478; /*  5.7:1 on paper */
+  --color-line: #e7e1d6;  /* hairlines only, never text */
+
+  /* Purple — primary action. Text and fill safe: 5.0:1 on paper, 5.3:1 under white. */
+  --color-accent: #6250f5;
+  /* The brand-sheet purple. Slightly too light for text on paper (4.3:1) — fills only. */
+  --color-accent-bright: #6c5cff;
+
+  --color-sun: #ffd24d;   /* fill only; ink on it is 12.4:1 */
+  --color-yes: #22c58e;   /* fill only — bars, dots, never text */
+  --color-ok: #0f7a5a;    /* the text/icon green: 5.1:1 on paper, 5.3:1 under white */
+  --color-alert: #c93b3b; /* the text red: 4.8:1 on paper */
+  --color-locked: #fff1d2;
+
+  --font-sans: var(--font-google-sans-flex), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: var(--font-baloo), 'Arial Rounded MT Bold', 'Trebuchet MS', sans-serif;
+  --radius-card: 1.25rem;
+}
+
+html {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  min-height: 100dvh;
+}
+
+h1, h2, h3, .font-extrabold, .font-bold {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+/* Shared primitives — kept here rather than repeated as utility soup in every page. */
+@layer components {
+  .wrap {
+    width: 100%;
+    max-width: 72rem;
+    margin-inline: auto;
+    padding-inline: 1.25rem;
+  }
+
+  .inner-page {
+    padding-top: 5rem;
+  }
+
+  .card {
+    background: #fffdf9;
+    border: 1.5px solid var(--color-line);
+    border-radius: var(--radius-card);
+    box-shadow: 0 8px 24px rgba(30, 35, 64, 0.06);
+  }
+
+  .hero-section {
+    background: #fff;
+    width: 100vw;
+    margin-left: calc(50% - 50vw);
+  }
+
+  .example-marquee {
+    overflow: hidden;
+    padding-block: 0.75rem;
+    mask-image: linear-gradient(to right, transparent, #000 7%, #000 93%, transparent);
+  }
+
+  .example-marquee-track {
+    display: flex;
+    width: max-content;
+  }
+
+  .example-marquee-group {
+    display: flex;
+    gap: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  .example-test-chip {
+    display: inline-flex;
+    align-items: center;
+    flex: none;
+    border-radius: 999px;
+    background: #fff;
+    padding: 0.75rem 1.1rem;
+    color: var(--color-ink);
+    font-family: var(--font-display);
+    font-size: 0.98rem;
+    line-height: 1;
+    box-shadow: 0 3px 8px rgba(30, 35, 64, 0.1);
+  }
+
+  .example-marquee-track-left { animation: marquee-left 60s linear infinite; }
+  .example-marquee-track-right { animation: marquee-right 54s linear infinite; }
+
+  .example-marquee:hover .example-marquee-track { animation-play-state: paused; }
+
+  .eyebrow,
+  .section-label {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    border-radius: 999px;
+    background: #ede9fe;
+    color: #4b3cc4;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.35rem 0.7rem;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-weight: 700;
+    border-radius: 999px;
+    border: 2px solid var(--color-ink);
+    padding: 0.85rem 1.4rem;
+    cursor: pointer;
+    transition: transform 0.06s ease, box-shadow 0.06s ease;
+    box-shadow: 0 4px 10px rgba(30, 35, 64, 0.16);
+    text-align: center;
+    white-space: nowrap;
+  }
+  .btn:active:not(:disabled) {
+    transform: translate(3px, 3px);
+    box-shadow: 0 1px 3px rgba(30, 35, 64, 0.12);
+  }
+  .btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .btn-primary { background: var(--color-accent); color: #fff; }
+  .btn-plain   { background: #fffdf9; color: var(--color-ink); }
+
+  /*
+   * The yes/no answer buttons, and the reason they look identical.
+   *
+   * These were previously green-for-yes and red-for-no. Red reads as the wrong
+   * answer, so colouring the options pushes respondents toward yes — and the
+   * whole product is the claim that these numbers are unbiased. Sample
+   * integrity beats visual flourish on this one screen.
+   *
+   * Both buttons must stay visually identical: same fill, same border, same
+   * weight. If you are about to tint one of them, don't.
+   */
+  .btn-answer {
+    background: #fffdf9;
+    color: var(--color-ink);
+    /* Answer labels are sentences, not verbs — they must be allowed to wrap.
+     * .btn defaults to nowrap, which silently overflows the longer option. */
+    white-space: normal;
+    line-height: 1.25;
+  }
+  .btn-answer:hover:not(:disabled) { background: #fff; }
+  .btn-ghost {
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+    color: var(--color-muted);
+    font-weight: 600;
+    text-decoration: underline;
+  }
+
+  .field {
+    width: 100%;
+    border: 2px solid var(--color-ink);
+    border-radius: 0.9rem;
+    padding: 0.7rem 0.9rem;
+    background: #fff;
+    font-size: 1rem;
+    outline: none;
+  }
+  .field:focus { box-shadow: 0 0 0 3px rgba(98, 80, 245, 0.35); }
+
+  .label {
+    display: block;
+    font-weight: 700;
+    margin-bottom: 0.4rem;
+    font-size: 0.95rem;
+  }
+
+  .hint { font-size: 0.82rem; color: var(--color-muted); }
+  .err  { font-size: 0.82rem; color: var(--color-alert); font-weight: 600; margin-top: 0.3rem; }
+
+  .pill {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    border: 1.5px solid var(--color-ink);
+  }
+}
+
+@keyframes marquee-left {
+  to { transform: translateX(-50%); }
+}
+
+@keyframes marquee-right {
+  from { transform: translateX(-50%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .example-marquee-track { animation: none; }
+}
+
+/* The paywall blur. Values are visible enough to prove data exists, not enough to read. */
+.locked-blur {
+  filter: blur(7px);
+  user-select: none;
+  pointer-events: none;
+}

@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
+import { toThumbUrl } from '../../lib/images.js';
 
 const CURRENCIES = [
   { code: 'USD', symbol: '$' },
@@ -38,6 +39,9 @@ export function CreateForm() {
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
+  const [imageWarning, setImageWarning] = useState(null);
+  const [dropActive, setDropActive] = useState(false);
+  const [draggedIndex, setDraggedIndex] = useState(null);
 
   const symbol = CURRENCIES.find((c) => c.code === form.currency)?.symbol ?? '$';
   const update = (key) => (event) => {
@@ -49,8 +53,27 @@ export function CreateForm() {
     setPrices((prev) => prev.map((p, i) => (i === index ? value : p)));
   }
 
-  async function handleImages(event) {
-    const selectedFiles = Array.from(event.target.files || []);
+  // Images are shown uncropped in a 4:3 frame (never cropped — a cut-off product
+  // logo is worse than some padding). Only flag genuinely extreme ratios, where
+  // that padding would be large enough to look like a mistake.
+  function readAspectRatio(file) {
+    return new Promise((resolve) => {
+      const img = new window.Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        resolve(img.naturalWidth / img.naturalHeight);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve(1);
+      };
+      img.src = url;
+    });
+  }
+
+  async function addFiles(fileList) {
+    const selectedFiles = Array.from(fileList || []).filter((file) => file.type.startsWith('image/'));
     if (!selectedFiles.length) return;
 
     const remaining = MAX_IMAGES - imageUrls.length;
@@ -64,6 +87,18 @@ export function CreateForm() {
     setUploading(true);
     setErrors((prev) => ({ ...prev, images: selectedFiles.length > remaining ? `Only the first ${remaining} image${remaining === 1 ? '' : 's'} were added.` : null }));
     try {
+      // Photos are shown in a 4:3 frame and never cropped, so anything
+      // narrower than that pads on the sides — portrait photos worst of all
+      // (a 3:4 photo only fills ~56% of the frame's width). Wide photos barely
+      // pad at all, so that threshold stays loose.
+      const ratios = await Promise.all(files.map(readAspectRatio));
+      setImageWarning(
+        ratios.some((ratio) => ratio < 0.85)
+          ? 'Tall or portrait photos show with padding on the sides in the 4:3 frame — a landscape shot fills it better.'
+          : ratios.some((ratio) => ratio > 2.2)
+            ? 'Very wide photos show with a little padding top and bottom — they’re never cropped.'
+            : null,
+      );
       const uploadedImages = await Promise.all(
         files.map(async (file) => {
           const body = new FormData();
@@ -81,6 +116,18 @@ export function CreateForm() {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = '';
     }
+  }
+
+  // The first image is always the "main" image shown to respondents —
+  // reordering (by drag, or the "Make main" button) just moves an entry to index 0.
+  function moveImage(fromIndex, toIndex) {
+    setImageUrls((previous) => {
+      if (fromIndex === toIndex || fromIndex < 0 || fromIndex >= previous.length) return previous;
+      const next = [...previous];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      return next;
+    });
   }
 
   async function handleSubmit(event) {
@@ -167,27 +214,98 @@ export function CreateForm() {
           <label className="label" htmlFor="image">
             Product images <span className="hint font-normal">(optional, up to {MAX_IMAGES})</span>
           </label>
-          <input
-            id="image"
-            ref={fileRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            multiple
-            disabled={uploading || imageUrls.length >= MAX_IMAGES}
-            onChange={handleImages}
-            className="field"
-          />
-          {uploading && <p className="hint mt-1">Uploading…</p>}
-          <p className="hint mt-1">Add up to {MAX_IMAGES} JPG, PNG or WEBP images. The first image is shown first.</p>
+
+          {imageUrls.length < MAX_IMAGES && (
+            <div
+              role="button"
+              tabIndex={0}
+              aria-disabled={uploading}
+              onClick={() => !uploading && fileRef.current?.click()}
+              onKeyDown={(event) => {
+                if ((event.key === 'Enter' || event.key === ' ') && !uploading) {
+                  event.preventDefault();
+                  fileRef.current?.click();
+                }
+              }}
+              onDragOver={(event) => {
+                event.preventDefault();
+                if (!uploading) setDropActive(true);
+              }}
+              onDragLeave={() => setDropActive(false)}
+              onDrop={(event) => {
+                event.preventDefault();
+                setDropActive(false);
+                if (!uploading) addFiles(event.dataTransfer.files);
+              }}
+              className={`flex flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed p-6 text-center transition-colors ${
+                dropActive ? 'border-ink bg-[#f4f1ff]' : 'border-line'
+              } ${uploading ? 'cursor-default opacity-60' : 'cursor-pointer hover:border-ink'}`}
+            >
+              <span className="text-sm font-bold">{uploading ? 'Uploading…' : 'Click or drag images here'}</span>
+              <span className="hint">
+                JPG, PNG or WEBP · up to {MAX_IMAGES - imageUrls.length} more
+              </span>
+              <input
+                id="image"
+                ref={fileRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                disabled={uploading}
+                onChange={(event) => addFiles(event.target.files)}
+                className="hidden"
+              />
+            </div>
+          )}
+
+          <p className="hint mt-2">
+            Images are shown in full, never cropped. The first image is the main image respondents see — drag a
+            thumbnail to reorder, or tap the ★ on any image to make it the main one.
+          </p>
+          {imageWarning && <p className="hint mt-1 text-amber-700">{imageWarning}</p>}
+          {errors.images && <p className="err">{errors.images}</p>}
+
           {imageUrls.length > 0 && (
             <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5">
               {imageUrls.map((imageUrl, index) => (
-                <div key={imageUrl} className="relative">
+                <div
+                  key={imageUrl}
+                  draggable
+                  onDragStart={() => setDraggedIndex(index)}
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={() => {
+                    if (draggedIndex !== null) moveImage(draggedIndex, index);
+                    setDraggedIndex(null);
+                  }}
+                  onDragEnd={() => setDraggedIndex(null)}
+                  className={`relative cursor-grab active:cursor-grabbing ${draggedIndex === index ? 'opacity-40' : ''}`}
+                >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={imageUrl} alt="" className="aspect-square w-full rounded-lg border-2 border-ink object-cover" />
+                  {/* This grid is a management view (reorder / remove / pick main), not
+                    * the respondent's view — respondents always see the full, uncropped
+                    * photo in the 4:3 frame. A small square crop here keeps this row uniform. */}
+                  <img
+                    src={toThumbUrl(imageUrl)}
+                    alt=""
+                    className="aspect-square w-full rounded-lg border-2 border-ink object-cover"
+                  />
+                  {index === 0 ? (
+                    <span className="pill bg-locked absolute left-1.5 top-1.5 px-2 py-1 text-xs">Main</span>
+                  ) : (
+                    <button
+                      type="button"
+                      className="absolute bottom-1.5 left-1.5 flex h-8 w-8 items-center justify-center rounded-full border-2 border-ink bg-white text-base leading-none shadow-sm"
+                      title="Make main image"
+                      aria-label="Make main image"
+                      onClick={() => moveImage(index, 0)}
+                    >
+                      ★
+                    </button>
+                  )}
                   <button
                     type="button"
-                    className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-ink bg-white text-sm font-bold"
+                    className="absolute right-1.5 top-1.5 flex h-8 w-8 items-center justify-center rounded-full border-2 border-ink bg-white text-lg font-bold leading-none shadow-sm"
+                    title="Remove image"
                     aria-label={`Remove image ${index + 1}`}
                     onClick={() => setImageUrls((previous) => previous.filter((_, itemIndex) => itemIndex !== index))}
                   >
@@ -197,7 +315,6 @@ export function CreateForm() {
               ))}
             </div>
           )}
-          {errors.images && <p className="err">{errors.images}</p>}
         </div>
 
         <div>

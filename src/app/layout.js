@@ -1,4 +1,5 @@
 import './globals.css';
+import Script from 'next/script';
 import { Google_Sans_Flex, Baloo_2 } from 'next/font/google';
 import { config } from '../lib/config.js';
 
@@ -27,6 +28,11 @@ export const metadata = {
     description: 'Stop guessing what to charge. Show different people different prices and see what they say yes to.',
     type: 'website',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Would You Buy It?',
+    description: 'Stop guessing what to charge. Show different people different prices and see what they say yes to.',
+  },
   robots: { index: true, follow: true },
 };
 
@@ -35,7 +41,16 @@ export const viewport = { themeColor: '#fff8f0' };
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${googleSansFlex.variable} ${baloo.variable}`}>
-      <body>{children}</body>
+      <body>
+        {children}
+        {config.analytics.enabled && (
+          <Script
+            src={config.analytics.scriptUrl}
+            data-website-id={config.analytics.websiteId}
+            strategy="afterInteractive"
+          />
+        )}
+      </body>
     </html>
   );
 }

@@ -41,7 +41,10 @@ export const config = {
   rateLimits: {
     respond: [150, 3600],
     createTest: [10, 3600],
-    upload: [20, 3600],
+    // TEMP (2026-08-26): raised from 20/hour to effectively unlimited for active
+    // create-form testing. MUST be reverted to [20, 3600] before real launch —
+    // see Development Guidelines "Outstanding / To revert" note.
+    upload: [1_000_000, 3600],
     events: [400, 3600],
     // Deliberately tighter than the others — this bucket gates account creation
     // and password-less login, so it protects an inbox/identity, not a vote.
@@ -80,6 +83,18 @@ export const config = {
     enabled: Boolean(process.env.STRIPE_SECRET_KEY),
     secretKey: process.env.STRIPE_SECRET_KEY || null,
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || null,
+  },
+
+  /**
+   * Self-hosted Umami (mario-umami.crhq.ai). Cookieless, no personal data —
+   * doesn't need a consent gate, unlike GA. Only fires against the production
+   * domain so dev/local traffic doesn't pollute real numbers. Not a secret:
+   * the website ID is public in every page's HTML regardless.
+   */
+  analytics: {
+    enabled: process.env.APP_URL === 'https://wouldyoubuyit.app',
+    scriptUrl: 'https://mario-umami.crhq.ai/script.js',
+    websiteId: '1de4e34b-bba0-4920-be72-d79af23b6996',
   },
 
   /** The one-time unlock price. Matches the figure already shown on the paywall. */

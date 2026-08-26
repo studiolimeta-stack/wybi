@@ -14,10 +14,16 @@ const LIMITS = {
 };
 const MAX_IMAGES = 5;
 
-function cleanText(value, max) {
+function cleanText(value, max, { preserveNewlines = false } = {}) {
   if (typeof value !== 'string') return '';
   // Strip control characters; they have no business in user-facing copy.
-  return value.replace(/[\u0000-\u001F\u007F]/g, '').trim().slice(0, max);
+  // "Included items" is newline-delimited ("one per line" -> checkmark list in
+  // OfferCard), so \n must survive here or every line collapses into one item.
+  const normalized = preserveNewlines ? value.replace(/\r\n?/g, '\n') : value;
+  const controlChars = preserveNewlines
+    ? /[\u0000-\u0009\u000B\u000C\u000E-\u001F\u007F]/g
+    : /[\u0000-\u001F\u007F]/g;
+  return normalized.replace(controlChars, '').trim().slice(0, max);
 }
 
 function isSafeHttpUrl(value) {
@@ -38,7 +44,7 @@ export function validateTestInput(body) {
   const description = cleanText(body.description, LIMITS.description);
   if (description.length < 5) errors.description = 'Describe it in a sentence or two.';
 
-  const includedItems = cleanText(body.includedItems, LIMITS.includedItems) || null;
+  const includedItems = cleanText(body.includedItems, LIMITS.includedItems, { preserveNewlines: true }) || null;
 
   let productUrl = cleanText(body.productUrl, LIMITS.productUrl) || null;
   if (productUrl && !isSafeHttpUrl(productUrl)) {

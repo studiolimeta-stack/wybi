@@ -34,15 +34,32 @@ export async function POST(request) {
 
     // Re-encoding through sharp normalises the format AND drops all EXIF —
     // uploaded photos routinely carry GPS coordinates we have no reason to store.
-    const output = await sharp(input)
-      .rotate()
+    const normalized = sharp(input).rotate();
+    const output = await normalized
+      .clone()
       .resize({ width: 1200, height: 1200, fit: 'inside', withoutEnlargement: true })
       .webp({ quality: 82 })
       .toBuffer();
 
+    // Thumbnails (the 56px selector row, the create-form preview grid) never
+    // need the full 1200px image — `uploads/` is served straight off disk by
+    // nginx, bypassing Next entirely (see Development Guidelines), so Next's
+    // built-in image optimizer can't resize these on the fly. Generate a real
+    // small file up front instead: `<name>-thumb.webp` next to the main image,
+    // found by ProductImageGallery via a plain filename convention.
+    const thumb = await normalized
+      .clone()
+      .resize({ width: 160, height: 160, fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: 75 })
+      .toBuffer();
+
     const filename = `${randomBytes(16).toString('hex')}.webp`;
+    const thumbFilename = filename.replace(/\.webp$/, '-thumb.webp');
     await mkdir(config.uploadDir, { recursive: true });
-    await writeFile(join(config.uploadDir, filename), output);
+    await Promise.all([
+      writeFile(join(config.uploadDir, filename), output),
+      writeFile(join(config.uploadDir, thumbFilename), thumb),
+    ]);
 
     return Response.json({ imageUrl: `/uploads/${filename}` });
   } catch (err) {

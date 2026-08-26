@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import wybiLockup from '../../public/brand/wybi-lockup.png';
+import wybiMark from '../../public/brand/wybi-mark.png';
 import { currentUser } from '../lib/session.js';
 import { isAdminEmail } from '../lib/admin.js';
 import { UserMenu } from './UserMenu.js';
@@ -35,6 +36,9 @@ export async function SiteHeader() {
           <Link href="/#how-it-works" className="hidden text-sm font-semibold text-muted hover:text-ink sm:inline-flex">
             How it works
           </Link>
+          <Link href="/#pricing" className="hidden text-sm font-semibold text-muted hover:text-ink sm:inline-flex">
+            Pricing
+          </Link>
 
           {user ? (
             <>
@@ -59,20 +63,100 @@ export async function SiteHeader() {
   );
 }
 
-/*
- * Deliberately a text wordmark, not the logo lockup: this footer also renders
- * on the respondent page, which is kept visually quiet so nothing primes an
- * answer. Attribution enough to know whose site this is, no more.
+const FOOTER_COLUMNS = [
+  {
+    heading: 'Product',
+    links: [
+      { href: '/#how-it-works', label: 'How it works' },
+      { href: '/#pricing', label: 'Pricing' },
+      { href: '/#demo', label: 'Live demo' },
+      { href: '/create', label: 'Create a price test' },
+    ],
+  },
+  {
+    heading: 'Account',
+    links: [
+      { href: '/dashboard', label: 'My tests' },
+      { href: '/account', label: 'Account' },
+      { href: '/login', label: 'Log in' },
+    ],
+  },
+  {
+    heading: 'Legal',
+    links: [
+      { href: '/privacy', label: 'Privacy Policy' },
+      { href: '/terms', label: 'Terms of Service' },
+      { href: '/cookies', label: 'Cookie Policy' },
+    ],
+  },
+];
+
+/**
+ * Two variants, on purpose.
+ *
+ * `minimal` (a text wordmark, not the logo lockup) is what renders on the
+ * respondent page — kept visually quiet so nothing primes an answer, and
+ * without the pricing/legal links that page has no bearing on. Attribution
+ * enough to know whose site this is, no more.
+ *
+ * `full` is the real site footer: everything else (landing, dashboard,
+ * create, account, results) is a "sell and delight" or "credible" surface
+ * per the brand zones, so the standard dark footer belongs there.
  */
-export function SiteFooter() {
+export function SiteFooter({ variant = 'full' }) {
+  if (variant === 'minimal') {
+    return (
+      <footer className="wrap py-10 text-center text-xs text-muted">
+        <p>Real people. Different prices. <span className="font-bold text-accent">Real answers.</span></p>
+        <p className="mt-1">
+          <Link href="/" className="underline">
+            Would You Buy It?
+          </Link>
+        </p>
+      </footer>
+    );
+  }
+
+  const year = new Date().getFullYear();
+
   return (
-    <footer className="wrap py-10 text-center text-xs text-muted">
-      <p>Real people. Different prices. <span className="font-bold text-accent">Real answers.</span></p>
-      <p className="mt-1">
-        <Link href="/" className="underline">
-          Would You Buy It?
-        </Link>
-      </p>
+    <footer className="bg-ink text-white">
+      <div className="wrap py-12 sm:py-16">
+        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.2fr_1fr_1fr_1fr]">
+          <div>
+            <Link href="/" aria-label="Would You Buy It home" className="inline-flex items-center gap-2.5">
+              <Image src={wybiMark} alt="" className="h-9 w-9 object-contain" />
+              <span className="text-lg font-extrabold tracking-tight text-white">Would You Buy It?</span>
+            </Link>
+            <p className="mt-3 max-w-xs text-sm leading-relaxed text-white/60">
+              Pricing research with real people. One hidden price per respondent, a deterministic report,
+              no AI anywhere in the loop.
+            </p>
+          </div>
+
+          {FOOTER_COLUMNS.map((column) => (
+            <div key={column.heading}>
+              <p className="text-xs font-bold uppercase tracking-wider text-white/45">{column.heading}</p>
+              <ul className="mt-3 space-y-2 text-sm">
+                {column.links.map((link) => (
+                  <li key={link.href}>
+                    <Link href={link.href} className="text-white/70 hover:text-white">
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-10 flex flex-col gap-3 border-t border-white/10 pt-6 text-xs text-white/45 sm:flex-row sm:items-center sm:justify-between">
+          <p>© {year} Would You Buy It. All rights reserved.</p>
+          <a href="mailto:studiolimeta@gmail.com" className="hover:text-white">
+            studiolimeta@gmail.com
+          </a>
+        </div>
+      </div>
     </footer>
   );
 }

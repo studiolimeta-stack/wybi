@@ -1,0 +1,88 @@
+import Link from 'next/link';
+import { SiteHeader, SiteFooter } from '../../components/SiteChrome.js';
+import { LegalPage } from '../../components/LegalPage.js';
+import { config } from '../../lib/config.js';
+
+export const metadata = { title: 'Terms of Service — Would You Buy It?' };
+
+const UPDATED = 'August 26, 2026';
+
+export default function TermsPage() {
+  return (
+    <>
+      <SiteHeader />
+      <LegalPage title="Terms of Service" updated={UPDATED}>
+        <p>
+          These terms cover using Would You Buy It? (&ldquo;WYBI&rdquo;) — either to create a price test or to
+          answer someone else&apos;s. By using the site you agree to them.
+        </p>
+
+        <h2>What WYBI does</h2>
+        <p>
+          A creator describes an offer and up to five prices. Each respondent who opens the shared link is shown
+          exactly one of those prices, at random, and answers whether they&apos;d buy at that price. The creator
+          gets back a report built from real responses — purchase-intent rates, modelled revenue per price, and a
+          suggested price where there&apos;s enough data. Nothing in that report is generated or guessed by AI; it
+          is arithmetic over the answers people actually gave.
+        </p>
+
+        <h2>Creating a test</h2>
+        <ul>
+          <li>Creating a test and collecting responses is free, up to {config.freeResponseLimit} responses per test.</li>
+          <li>
+            Unlocking the full report for a test past that free limit is a one-time payment of{' '}
+            {config.unlockCurrency} ${config.unlockPrice.toFixed(2)} — per test, not a subscription. It grants
+            access to that one test&apos;s detailed report; it does not unlock any other test.
+          </li>
+          <li>You&apos;re responsible for the accuracy of what you describe in your offer and for the prices you test.</li>
+          <li>
+            You won&apos;t use WYBI to test anything illegal, to collect personal data from respondents beyond what
+            the product itself asks for, or to try to identify an individual respondent.
+          </li>
+          <li>We can remove a test that violates these terms or that we reasonably believe is abusive, fraudulent, or spam.</li>
+        </ul>
+
+        <h2>Answering a test</h2>
+        <p>
+          Answering is anonymous and doesn&apos;t require an account. One response per person per test, tracked by
+          an anonymous browser cookie — see the <Link href="/cookies">Cookie Policy</Link>. Answers are used only
+          to build the aggregated report described above; see the <Link href="/privacy">Privacy Policy</Link> for
+          exactly what&apos;s collected and how it&apos;s shared.
+        </p>
+
+        <h2>Payments</h2>
+        <p>
+          Report unlocks are processed by Stripe. Because an unlock grants immediate access to a fully generated
+          report, purchases are generally final once the report has been unlocked. If something went wrong with a
+          charge, contact us and we&apos;ll sort it out.
+        </p>
+
+        <h2>Accounts</h2>
+        <p>
+          You&apos;re responsible for keeping access to your sign-in method (Google or your email inbox) secure.
+          You can delete your account at any time from <Link href="/account">your account page</Link>.
+        </p>
+
+        <h2>No warranty</h2>
+        <p>
+          WYBI reports reflect the responses actually collected — they&apos;re a research signal, not a guarantee of
+          real-world sales. We flag when a test doesn&apos;t have enough responses to name a confident
+          best-performing price rather than showing you a number we don&apos;t believe. The service is provided
+          &ldquo;as is,&rdquo; without warranties of any kind, to the extent the law allows.
+        </p>
+
+        <h2>Changes</h2>
+        <p>
+          We may update these terms as the product changes. We&apos;ll update the date at the top of this page when
+          we do. Continuing to use WYBI after a change means you accept the updated terms.
+        </p>
+
+        <h2>Contact</h2>
+        <p>
+          Questions about these terms: <a href="mailto:studiolimeta@gmail.com">studiolimeta@gmail.com</a>.
+        </p>
+      </LegalPage>
+      <SiteFooter />
+    </>
+  );
+}

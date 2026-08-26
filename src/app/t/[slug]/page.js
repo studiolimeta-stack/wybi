@@ -54,7 +54,7 @@ export default async function RespondentPage({ params }) {
     return (
       <>
         <ClosedNotice title={test.title} />
-        <SiteFooter />
+        <SiteFooter variant="minimal" />
       </>
     );
   }
@@ -103,7 +103,7 @@ export default async function RespondentPage({ params }) {
           </Link>
         </p>
       </main>
-      <SiteFooter />
+      <SiteFooter variant="minimal" />
     </>
   );
 }

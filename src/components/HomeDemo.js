@@ -3,7 +3,13 @@
 import { useState } from 'react';
 import { OfferCard } from './OfferCard.js';
 
-const DEMO_IMAGE = '/brand/demo/sunday-reset-kit.png';
+const DEMO_IMAGES = [
+  '/brand/demo/sunday-reset-kit-1.webp',
+  '/brand/demo/sunday-reset-kit-2.webp',
+  '/brand/demo/sunday-reset-kit-3.webp',
+  '/brand/demo/sunday-reset-kit-4.webp',
+  '/brand/demo/sunday-reset-kit-5.webp',
+];
 const CONFIDENCE_OPTIONS = [
   { value: 'maybe', label: 'Maybe', hint: 'Sounds interesting.' },
   { value: 'probably', label: 'Probably', hint: 'I would seriously consider buying.' },
@@ -12,11 +18,11 @@ const CONFIDENCE_OPTIONS = [
 
 const DEMO_OFFER = {
   title: 'The Sunday Reset Kit',
-  description: 'A simple weekly planning kit for people who want a calmer, more focused Monday.',
-  included_items: 'Undated weekly planner\nHabit tracker\nFocus timer\nFree shipping',
+  description: 'A beautifully designed weekly planning kit that helps you clear your head, organize your priorities, and build better habits—so you can start every Monday feeling calmer, more focused, and ready for the week ahead.',
+  included_items: 'A tactile weekly planning kit for a calmer, more focused Monday.\nUndated weekly planner\n60-minute focus timer\nFour habit-tracker cards\nSteel pen and gift-ready box\nFree shipping',
   currency: 'USD',
   billing_type: 'one_time',
-  image_urls: [DEMO_IMAGE, '/brand/demo/sunday-reset-kit-angle.png'],
+  image_urls: DEMO_IMAGES,
 };
 
 /** Mirrors the respondent flow, including the follow-up questions after a vote. */
@@ -47,7 +53,12 @@ export function HomeDemo() {
         <span className="text-xs font-bold text-muted">Try the full respondent flow</span>
       </div>
 
-      <OfferCard test={DEMO_OFFER} price={34} className="border-none shadow-[0_8px_24px_rgba(30,35,64,0.06)]">
+      <OfferCard
+        test={DEMO_OFFER}
+        price={34}
+        titleClassName="pt-4 pb-2 md:pt-0 md:pb-0"
+        className="border-none shadow-[0_8px_24px_rgba(30,35,64,0.06)]"
+      >
         {step === 'ask' && (
           <div className="mt-6">
             <h2 className="text-xl font-extrabold tracking-tight">Would you actually buy this?</h2>

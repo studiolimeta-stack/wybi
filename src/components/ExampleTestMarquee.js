@@ -44,7 +44,7 @@ function MarqueeRow({ items, direction }) {
 
 export function ExampleTestMarquee() {
   return (
-    <div className="mt-7 space-y-3">
+    <div className="mt-5 space-y-2">
       <MarqueeRow items={LEFT_MOVING_TESTS} direction="left" />
       <MarqueeRow items={RIGHT_MOVING_TESTS} direction="right" />
     </div>

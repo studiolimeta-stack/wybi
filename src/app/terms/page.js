@@ -28,7 +28,9 @@ export default function TermsPage() {
 
         <h2>Creating a test</h2>
         <ul>
-          <li>Creating a test and collecting responses is free, up to {config.freeResponseLimit} responses per test.</li>
+          <li>
+            Creating a test is free, and the first {config.freeResponseLimit} responses per test are free.
+          </li>
           <li>
             Unlocking the full report for a test past that free limit is a one-time payment of{' '}
             {config.unlockCurrency} ${config.unlockPrice.toFixed(2)} — per test, not a subscription. It grants

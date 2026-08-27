@@ -52,12 +52,17 @@ async function loadOverview(userFilter) {
 
   // Distribution matters more than the average here — a handful of viral tests
   // would otherwise hide the fact that most tests get nothing.
-  const distribution = await query(`
-    SELECT
+  // The top bucket is the free limit itself, read from config rather than
+  // hardcoded — it used to be a literal 25 that stayed behind when the free
+  // tier moved, which is the same drift the copy had.
+  const distribution = await query(
+    `SELECT
       COUNT(*) FILTER (WHERE n >= 1)::int  AS with_any,
       COUNT(*) FILTER (WHERE n >= 5)::int  AS with_five,
-      COUNT(*) FILTER (WHERE n >= 25)::int AS with_twentyfive
-    FROM (SELECT t.id, COUNT(r.id) AS n FROM tests t LEFT JOIN responses r ON r.test_id = t.id GROUP BY t.id) s`);
+      COUNT(*) FILTER (WHERE n >= $1)::int AS with_free_limit
+    FROM (SELECT t.id, COUNT(r.id) AS n FROM tests t LEFT JOIN responses r ON r.test_id = t.id GROUP BY t.id) s`,
+    [config.freeResponseLimit],
+  );
 
   const [users, userSummary, payments, paymentSummary, traffic, onlineNow] = await Promise.all([
     listUsersForAdmin({ limit: 100, filter: userFilter }),
@@ -194,7 +199,10 @@ export default async function AdminPage({ searchParams }) {
         <ul className="mt-2 text-sm space-y-1">
           <li>Tests with ≥1 response: <strong>{data.distribution.with_any}</strong> / {data.tests.total}</li>
           <li>Tests with ≥5 responses: <strong>{data.distribution.with_five}</strong> (target: 50% of tests)</li>
-          <li>Tests with ≥25 responses: <strong>{data.distribution.with_twentyfive}</strong> (target: 20 tests)</li>
+          <li>
+            Tests with {config.freeResponseLimit} responses (the free limit):{' '}
+            <strong>{data.distribution.with_free_limit}</strong> (target: 20 tests)
+          </li>
         </ul>
       </div>
 

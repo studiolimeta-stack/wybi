@@ -31,6 +31,25 @@ export default async function DashboardPage() {
           )}
         </p>
 
+        {tests.length > 0 && (
+          <div className="mt-6 grid gap-3 sm:grid-cols-4">
+            {[
+              { label: 'Tests', value: tests.length },
+              { label: 'Active', value: tests.filter((t) => t.status === 'active').length },
+              { label: 'Responses', value: tests.reduce((sum, t) => sum + t.response_count, 0) },
+              {
+                label: 'Unlocked',
+                value: `${tests.filter((t) => t.is_paid).length} of ${tests.length}`,
+              },
+            ].map((tile) => (
+              <div key={tile.label} className="card p-4">
+                <p className="text-xs font-bold uppercase tracking-wider text-muted">{tile.label}</p>
+                <p className="text-2xl font-extrabold">{tile.value}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
         {tests.length === 0 ? (
           <div className="card mt-7 p-6 text-center">
             <p className="text-xl font-extrabold tracking-tight">Nothing here yet.</p>

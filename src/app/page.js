@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { SiteHeader, SiteFooter } from '../components/SiteChrome.js';
+import { SiteFooter } from '../components/SiteChrome.js';
+import { SiteHeaderStatic } from '../components/SiteHeaderStatic.js';
 import { CheckIcon } from '../components/CheckIcon.js';
 import { ExampleTestMarquee } from '../components/ExampleTestMarquee.js';
 import { HomeDemo } from '../components/HomeDemo.js';
@@ -12,7 +13,7 @@ export const dynamic = 'force-static';
 
 const FREE_INCLUDES = [
   'Unlimited price tests',
-  `Up to ${config.freeResponseLimit} responses per test, free`,
+  `${config.freeResponseLimit} responses per test, free`,
   'Live response count as answers come in',
   'One hidden price per respondent, always',
 ];
@@ -72,7 +73,7 @@ export default function HomePage() {
         * per-visitor server render to hang a track() call on. Without it the
         * creator funnel in /admin has no denominator (PRD §38). */}
       <TrackView name="homepage_view" />
-      <SiteHeader />
+      <SiteHeaderStatic />
 
       <main className="wrap pb-12 sm:pb-20">
         <section className="hero-section mt-0">

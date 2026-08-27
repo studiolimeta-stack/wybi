@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getTestByCreatorToken, getPriceVariants } from '../../../lib/tests.js';
 import { SiteHeader, SiteFooter } from '../../../components/SiteChrome.js';
-import { ShareBox } from './ShareBox.js';
+import { ShareBox } from '../../../components/ShareBox.js';
 import { ResultsLinkActions } from './ResultsLinkActions.js';
 import { config, formatPrice } from '../../../lib/config.js';
 import { currentUser } from '../../../lib/session.js';

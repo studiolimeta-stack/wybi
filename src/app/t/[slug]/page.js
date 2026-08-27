@@ -1,12 +1,13 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import Script from 'next/script';
 import { OfferCard } from '../../../components/OfferCard.js';
 import { SiteFooter } from '../../../components/SiteChrome.js';
 import { RespondFlow } from './RespondFlow.js';
 import { getTestBySlug, assignPriceVariant, getExistingResponse } from '../../../lib/tests.js';
 import { readVisitorId } from '../../../lib/visitor.js';
 import { track } from '../../../lib/events.js';
-import { currencySymbol, formatPrice } from '../../../lib/config.js';
+import { currencySymbol, formatPrice, config } from '../../../lib/config.js';
 
 export const dynamic = 'force-dynamic';
 
@@ -92,6 +93,7 @@ export default async function RespondentPage({ params }) {
               currencySymbol={currencySymbol(test.currency)}
               askConfidence={test.ask_confidence}
               askSuggestedPrice={test.ask_suggested_price}
+              turnstileSiteKey={config.turnstile.enabled ? config.turnstile.siteKey : null}
             />
           )}
         </OfferCard>
@@ -104,6 +106,12 @@ export default async function RespondentPage({ params }) {
         </p>
       </main>
       <SiteFooter variant="minimal" />
+      {/* Invisible challenge only — no checkbox, no visible UI, so it doesn't
+        * violate decision 9 (respondent page as a neutral instrument). Loaded
+        * only on this page, not sitewide, and only when real keys are set. */}
+      {config.turnstile.enabled && (
+        <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" strategy="afterInteractive" async defer />
+      )}
     </>
   );
 }

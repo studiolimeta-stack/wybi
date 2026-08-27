@@ -22,7 +22,15 @@ export const config = {
   adminToken: process.env.ADMIN_TOKEN || 'build-time-placeholder',
   uploadDir: process.env.UPLOAD_DIR || '/opt/projects/user/wouldyoubuyit/uploads',
 
-  freeResponseLimit: Number(process.env.FREE_RESPONSE_LIMIT || 25),
+  /**
+   * The free tier is deliberately the SAME number as
+   * `minResponsesForRecommendation` below. It was 25 while that threshold was
+   * 30, which put two different counts on one screen — "free up to 25" next to
+   * "18 more responses to go" — and read as the paywall landing before the
+   * product could say anything useful. Keep them equal: free gets you exactly
+   * enough sample to have a recommendation, then you pay to read it.
+   */
+  freeResponseLimit: Number(process.env.FREE_RESPONSE_LIMIT || 30),
 
   /** Below these thresholds we refuse to name a "winning" price — the maths would be noise. */
   minResponsesForRecommendation: 30,
@@ -91,6 +99,20 @@ export const config = {
     enabled: Boolean(process.env.STRIPE_SECRET_KEY),
     secretKey: process.env.STRIPE_SECRET_KEY || null,
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || null,
+  },
+
+  /**
+   * Invisible Cloudflare Turnstile challenge on the respondent vote endpoint
+   * (see lib/turnstile.js). Same optional-at-boot shape as the integrations
+   * above: without a site/secret key pair, POST /api/respond accepts every
+   * vote unverified, exactly as it does today. `siteKey` is not a secret —
+   * it ships in the respondent page's HTML — but it's still config-driven so
+   * dev/local never renders a widget pointed at the production site.
+   */
+  turnstile: {
+    enabled: Boolean(process.env.TURNSTILE_SITE_KEY && process.env.TURNSTILE_SECRET_KEY),
+    siteKey: process.env.TURNSTILE_SITE_KEY || null,
+    secretKey: process.env.TURNSTILE_SECRET_KEY || null,
   },
 
   /**

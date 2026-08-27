@@ -9,7 +9,8 @@ import {
   SuggestedPriceBlock,
   PricingConfidenceBlock,
 } from '../../../components/ResultsBlocks.js';
-import { ResultsActions } from './ResultsActions.js';
+import { ManageTestMenu } from './ManageTestMenu.js';
+import { ShareTestButton } from './ShareTestButton.js';
 import { getTestByCreatorToken, getPriceVariants, getResponses, isReportLocked } from '../../../lib/tests.js';
 import { buildReport } from '../../../lib/stats.js';
 import { track } from '../../../lib/events.js';
@@ -80,18 +81,36 @@ export default async function ResultsPage({ params }) {
     <>
       <SiteHeader />
       <main className="wrap inner-page pb-16 space-y-5">
-        <div>
-          <div className="flex items-center gap-2 pt-2">
-            <span className={`pill ${test.status === 'active' ? 'bg-ok text-white border-ok' : 'bg-locked'}`}>
-              {test.status}
-            </span>
-            {test.is_paid && <span className="pill bg-white">Full report</span>}
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 pt-2">
+              <span className={`pill ${test.status === 'active' ? 'bg-ok text-white border-ok' : 'bg-locked'}`}>
+                {test.status}
+              </span>
+              {test.is_paid && <span className="pill bg-white">Full report</span>}
+            </div>
+            <h1 className="mt-3 text-3xl sm:text-4xl font-extrabold tracking-tight">{test.title}</h1>
+            <p className="mt-2 text-muted">Your purchase-intent results, in one place.</p>
           </div>
-          <h1 className="mt-3 text-3xl sm:text-4xl font-extrabold tracking-tight">{test.title}</h1>
-          <p className="mt-2 text-muted">Your purchase-intent results, in one place.</p>
-          <Link href={`/t/${test.slug}`} className="hint underline" target="_blank">
-            View the page respondents see
-          </Link>
+
+          {/* All three land here, next to the title, so they're usable the instant
+            * you land on the page — not a link buried under the report, not a
+            * "Manage" card at the very bottom you'd only see after scrolling past
+            * everything. Scrolls horizontally rather than wrapping below `sm` —
+            * three buttons plus a title don't all fit a 390px screen, and a
+            * sideways-scrolling action row reads better than the row breaking
+            * onto its own line under the title. */}
+          <div className="-mx-1 flex w-full items-center gap-2 overflow-x-auto px-1 pb-1 sm:w-auto sm:overflow-visible sm:pb-0">
+            <Link
+              href={`/t/${test.slug}`}
+              target="_blank"
+              className="btn btn-plain shrink-0 px-3 py-2 text-sm sm:px-4"
+            >
+              View respondent page
+            </Link>
+            <ShareTestButton shareUrl={shareUrl} title={test.title} />
+            <ManageTestMenu token={test.creator_token} status={test.status} locked={locked} />
+          </div>
         </div>
 
         {responses.length === 0 ? (
@@ -119,8 +138,8 @@ export default async function ResultsPage({ params }) {
 
             {!locked && remaining > 0 && (
               <p className="hint text-center">
-                Free up to {test.free_response_limit} responses — {remaining} to go before the detailed
-                report locks.
+                The first {test.free_response_limit} responses are free — {remaining} to go before the
+                detailed report locks.
               </p>
             )}
 
@@ -150,8 +169,6 @@ export default async function ResultsPage({ params }) {
             )}
           </>
         )}
-
-        <ResultsActions token={test.creator_token} shareUrl={shareUrl} status={test.status} locked={locked} />
       </main>
       <SiteFooter />
     </>

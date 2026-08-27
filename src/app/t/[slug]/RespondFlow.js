@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { TrackedLink } from '../../../components/Track.js';
 
 const CONFIDENCE_OPTIONS = [
@@ -13,12 +13,51 @@ const CONFIDENCE_OPTIONS = [
  * Steps: ask → (confidence | suggested price) → done.
  * The yes/no is POSTed the instant it is clicked; the follow-up PATCHes on top.
  */
-export function RespondFlow({ slug, currencySymbol, askConfidence, askSuggestedPrice }) {
+export function RespondFlow({ slug, currencySymbol, askConfidence, askSuggestedPrice, turnstileSiteKey = null }) {
   const [step, setStep] = useState('ask');
   const [answer, setAnswer] = useState(null);
   const [suggested, setSuggested] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+
+  // Invisible Turnstile widget. Renders into `turnstileRef` the moment the
+  // Cloudflare script (loaded by the page, see t/[slug]/page.js) is ready,
+  // then hands a fresh token to `callback` on its own — no visible UI unless
+  // Cloudflare decides it needs an interactive challenge, which is rare and
+  // is exactly what the empty container below exists to hold.
+  const turnstileRef = useRef(null);
+  const widgetIdRef = useRef(null);
+  const [turnstileToken, setTurnstileToken] = useState(null);
+
+  useEffect(() => {
+    if (!turnstileSiteKey) return undefined;
+    let cancelled = false;
+
+    function tryRender(attemptsLeft) {
+      if (cancelled || widgetIdRef.current !== null) return;
+      if (window.turnstile && turnstileRef.current) {
+        widgetIdRef.current = window.turnstile.render(turnstileRef.current, {
+          sitekey: turnstileSiteKey,
+          size: 'invisible',
+          callback: (token) => setTurnstileToken(token),
+          'expired-callback': () => setTurnstileToken(null),
+          'error-callback': () => setTurnstileToken(null),
+        });
+        return;
+      }
+      // The Cloudflare script loads async (next/script "afterInteractive"),
+      // so it may not be on window yet on first render. Poll briefly rather
+      // than block the page on it.
+      if (attemptsLeft > 0) setTimeout(() => tryRender(attemptsLeft - 1), 100);
+    }
+
+    tryRender(50); // ~5s ceiling
+
+    return () => {
+      cancelled = true;
+      if (widgetIdRef.current !== null && window.turnstile) window.turnstile.remove(widgetIdRef.current);
+    };
+  }, [turnstileSiteKey]);
 
   function trackingPayload() {
     if (typeof window === 'undefined') return {};
@@ -40,12 +79,18 @@ export function RespondFlow({ slug, currencySymbol, askConfidence, askSuggestedP
       const res = await fetch('/api/respond', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug, answer: value, ...trackingPayload() }),
+        body: JSON.stringify({ slug, answer: value, turnstileToken, ...trackingPayload() }),
       });
       const data = await res.json();
       if (!res.ok) {
         setError(data.error || 'Could not record your answer.');
         setBusy(false);
+        // Turnstile tokens are single-use — get a fresh one queued up before
+        // the visitor retries, otherwise a second click would fail the same way.
+        if (widgetIdRef.current !== null && window.turnstile) {
+          setTurnstileToken(null);
+          window.turnstile.reset(widgetIdRef.current);
+        }
         return;
       }
 
@@ -97,6 +142,11 @@ export function RespondFlow({ slug, currencySymbol, askConfidence, askSuggestedP
         </div>
 
         {error && <p className="err text-center mt-3">{error}</p>}
+
+        {/* Empty unless Cloudflare needs to show an interactive challenge —
+          * rare, and not styled/hidden away because that's exactly when it
+          * needs to be visible and clickable. */}
+        {turnstileSiteKey && <div ref={turnstileRef} />}
       </div>
     );
   }

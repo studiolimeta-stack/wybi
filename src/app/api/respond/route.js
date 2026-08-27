@@ -5,6 +5,7 @@ import { readVisitorId } from '../../../lib/visitor.js';
 import { track } from '../../../lib/events.js';
 import { query } from '../../../lib/db.js';
 import { config } from '../../../lib/config.js';
+import { verifyTurnstileToken } from '../../../lib/turnstile.js';
 
 export const runtime = 'nodejs';
 
@@ -30,7 +31,8 @@ async function loadContext(request, body) {
  * yes/no is the data the whole product is built on.
  */
 export async function POST(request) {
-  const ipHash = hashIp(clientIp(request.headers));
+  const ip = clientIp(request.headers);
+  const ipHash = hashIp(ip);
 
   // Threshold and rationale live in config.rateLimits.
   if (!(await checkRateLimit('respond', ipHash))) {
@@ -42,6 +44,14 @@ export async function POST(request) {
     body = await request.json();
   } catch {
     return Response.json({ error: 'Malformed request.' }, { status: 400 });
+  }
+
+  // Invisible Turnstile challenge — a no-op when TURNSTILE_* isn't configured
+  // (config.turnstile.enabled false), so dev/test never needs a real key.
+  // Checked before touching the DB so a bot without a valid token never
+  // reaches assignPriceVariant/submitResponse at all.
+  if (!(await verifyTurnstileToken(body.turnstileToken, ip))) {
+    return Response.json({ error: 'Could not verify your browser — please retry.' }, { status: 400 });
   }
 
   const ctx = await loadContext(request, body);

@@ -5,6 +5,10 @@ import { useState } from 'react';
 /**
  * One-click sharing (PRD §36). Share text is intentionally casual and
  * first-person — this link gets pasted into group chats, not press releases.
+ *
+ * Shared between `/created/[token]` (first thing you see after creating a
+ * test) and the "Share this test" modal on `/r/[token]` (every visit after
+ * that) — same links, same tracked events, one implementation.
  */
 export function ShareBox({ shareUrl, title }) {
   const [copied, setCopied] = useState(false);

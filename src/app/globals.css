@@ -56,6 +56,22 @@ h1, h2, h3, .font-extrabold, .font-bold {
   letter-spacing: -0.02em;
 }
 
+/*
+ * Tailwind v4's preflight resets `button` to `cursor: default` (v3 did not).
+ * `.btn` sets its own `cursor: pointer`, which is why only the bare buttons —
+ * gallery thumbnails, "Remove price/image", header "Log out", the dropdown
+ * menu items, the share-modal close — looked dead under the cursor while
+ * every `.btn` felt fine. Restored once here rather than as a `cursor-pointer`
+ * class repeated on each one. `:disabled` is excluded so `.btn:disabled`'s
+ * `not-allowed` still reads correctly.
+ */
+@layer base {
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
 /* Shared primitives — kept here rather than repeated as utility soup in every page. */
 @layer components {
   .wrap {
@@ -79,6 +95,45 @@ h1, h2, h3, .font-extrabold, .font-bold {
 
   .scrollbar-none::-webkit-scrollbar {
     display: none; /* Chrome, Safari */
+  }
+
+  /*
+   * A horizontal scroller that admits it scrolls. `overflow-x-auto` plus a
+   * hidden scrollbar is invisible on a phone: the row looks like it simply
+   * ends at the screen edge, so anything past it is never discovered — on
+   * `/r/<token>` that was "Manage this test", and with it the CSV export the
+   * paid report is sold on. The fade shows content running under the edge.
+   * Only below `sm`, where the row actually scrolls; above it the same row is
+   * `overflow-visible` and a permanent fade would just look like a bug.
+   * Pair it with trailing padding wider than the fade, so scrolling to the end
+   * leaves the last item clear of the gradient instead of half-dissolved.
+   */
+  .scroll-hint-x {
+    mask-image: linear-gradient(to right, #000 calc(100% - 2.25rem), transparent);
+  }
+
+  @media (min-width: 40rem) {
+    .scroll-hint-x {
+      mask-image: none;
+    }
+  }
+
+  /*
+   * Admin/report data tables. Cells need a column gutter of their own: with
+   * only vertical padding, adjacent values butt straight together and read as
+   * one token — "Resp." + "Status" rendered as "0active", and a `2` price
+   * count next to a `8/26/2026` created date rendered as "28/26/2026", which
+   * looks like a corrupted date rather than two columns.
+   * Trailing gutter only, so the table still starts flush with the card edge.
+   */
+  .data-table th,
+  .data-table td {
+    padding-inline-end: 1.25rem;
+  }
+
+  .data-table th:last-child,
+  .data-table td:last-child {
+    padding-inline-end: 0;
   }
 
   .card {

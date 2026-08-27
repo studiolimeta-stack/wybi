@@ -26,10 +26,22 @@ function cleanText(value, max, { preserveNewlines = false } = {}) {
   return normalized.replace(controlChars, '').trim().slice(0, max);
 }
 
+/**
+ * A dotted, registrable-looking host: one or more labels then a 2+ letter TLD.
+ * `new URL()` alone is not a link check — once the missing scheme is filled in
+ * below, `not-a-valid-url` parses perfectly as a host and only fails much
+ * later, as a DNS error in a respondent's browser on the live test page, where
+ * nobody is watching. IDN hosts are already punycoded by `URL`, so they match;
+ * bare hostnames (`localhost`) and raw IPs deliberately do not — this link is
+ * published to strangers on the internet.
+ */
+const REGISTRABLE_HOSTNAME = /^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/i;
+
 function isSafeHttpUrl(value) {
   try {
     const url = new URL(value);
-    return url.protocol === 'http:' || url.protocol === 'https:';
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
+    return REGISTRABLE_HOSTNAME.test(url.hostname);
   } catch {
     return false;
   }
@@ -49,7 +61,9 @@ export function validateTestInput(body) {
   let productUrl = cleanText(body.productUrl, LIMITS.productUrl) || null;
   if (productUrl && !isSafeHttpUrl(productUrl)) {
     productUrl = productUrl.startsWith('http') ? productUrl : `https://${productUrl}`;
-    if (!isSafeHttpUrl(productUrl)) errors.productUrl = 'That does not look like a valid link.';
+    if (!isSafeHttpUrl(productUrl)) {
+      errors.productUrl = 'That is not a working link. Use the full address, like https://myproduct.com.';
+    }
   }
 
   const currency = config.currencies.some((c) => c.code === body.currency) ? body.currency : 'USD';

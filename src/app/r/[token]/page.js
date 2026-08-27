@@ -100,8 +100,15 @@ export default async function ResultsPage({ params }) {
             * everything. Scrolls horizontally rather than wrapping below `sm` —
             * three buttons plus a title don't all fit a 390px screen, and a
             * sideways-scrolling action row reads better than the row breaking
-            * onto its own line under the title. */}
-          <div className="-mx-1 flex w-full items-center gap-2 overflow-x-auto scrollbar-none px-1 pt-2 pb-3 sm:w-auto sm:overflow-visible sm:pt-0 sm:pb-0">
+            * onto its own line under the title.
+            *
+            * `.scroll-hint-x` is what makes that scroll discoverable: with the
+            * scrollbar hidden, the row previously looked like it just ended at
+            * the screen edge, so "Manage this test" — and the CSV export
+            * inside it — was invisible on a 390px phone. The fade shows the
+            * row running under the edge; `pr-12` is wider than the fade, so
+            * scrolling to the end leaves the last button fully solid. */}
+          <div className="scroll-hint-x -mx-1 flex w-full items-center gap-2 overflow-x-auto scrollbar-none pt-2 pb-3 pl-1 pr-12 sm:w-auto sm:overflow-visible sm:pt-0 sm:pr-1 sm:pb-0">
             <Link
               href={`/t/${test.slug}`}
               target="_blank"

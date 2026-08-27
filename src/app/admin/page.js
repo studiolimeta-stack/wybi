@@ -45,7 +45,7 @@ async function loadOverview(userFilter) {
       FROM test_reports tr JOIN tests t ON t.id = tr.test_id
       ORDER BY tr.created_at DESC LIMIT 25`),
     query(`
-      SELECT t.id, t.slug, t.title, t.status, t.is_paid, t.created_at, t.reported_count,
+      SELECT t.id, t.slug, t.title, t.status, t.is_paid, t.created_at, t.reported_count, t.creator_token,
              (SELECT COUNT(*)::int FROM responses r WHERE r.test_id = t.id) AS response_count
       FROM tests t ORDER BY t.created_at DESC LIMIT 40`),
   ]);
@@ -252,7 +252,7 @@ export default async function AdminPage({ searchParams }) {
           </div>
         </div>
 
-        <table className="mt-3 w-full text-sm">
+        <table className="data-table mt-3 w-full text-sm">
           <thead>
             <tr className="text-left border-b-2 border-ink">
               <th className="py-2">Status</th>
@@ -320,7 +320,7 @@ export default async function AdminPage({ searchParams }) {
             : '—'}{' '}
           total. <code>provider = &apos;dev_mock&apos;</code> rows are simulated unlocks, not real revenue.
         </p>
-        <table className="mt-3 w-full text-sm">
+        <table className="data-table mt-3 w-full text-sm">
           <thead>
             <tr className="text-left border-b-2 border-ink">
               <th className="py-2">Test</th>
@@ -386,7 +386,7 @@ export default async function AdminPage({ searchParams }) {
 
       <div className="card p-5 overflow-x-auto">
         <h2 className="font-extrabold">Recent tests</h2>
-        <table className="mt-2 w-full text-sm">
+        <table className="data-table mt-2 w-full text-sm">
           <thead>
             <tr className="text-left border-b-2 border-ink">
               <th className="py-2">Title</th>
@@ -403,7 +403,16 @@ export default async function AdminPage({ searchParams }) {
                 <td className="py-2 text-right tabular-nums">{test.response_count}</td>
                 <td className="py-2">{test.status}</td>
                 <td className="py-2">{test.reported_count > 0 ? `⚠️ ${test.reported_count}` : ''}</td>
-                <td className="py-2">
+                {/* "results" is the moderation link, not a nicety: pause and
+                  * delete live on /r/<token> (ManageTestMenu), so without it
+                  * the hint under this table — "pause or delete an abusive
+                  * test from its results link above" — was only true for a
+                  * test somebody had already reported. Same pair of links the
+                  * Reported-tests list and /admin/users/[id] already use. */}
+                <td className="py-2 space-x-2">
+                  <a className="underline" href={`/r/${test.creator_token}`}>
+                    results
+                  </a>
                   <a className="underline" href={`/t/${test.slug}`}>
                     page
                   </a>

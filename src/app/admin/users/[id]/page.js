@@ -78,7 +78,7 @@ export default async function AdminUserPage({ params, searchParams }) {
           {tests.length === 0 ? (
             <p className="hint mt-2">This account hasn&apos;t created any tests.</p>
           ) : (
-            <table className="mt-3 w-full text-sm">
+            <table className="data-table mt-3 w-full text-sm">
               <thead>
                 <tr className="text-left border-b-2 border-ink">
                   <th className="py-2">Title</th>

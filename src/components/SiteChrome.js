@@ -37,7 +37,10 @@ const FOOTER_COLUMNS = [
     links: [
       { href: '/dashboard', label: 'My tests' },
       { href: '/account', label: 'Account' },
-      { href: '/login', label: 'Log in' },
+      // Dropped for a signed-in visitor — see `SiteFooter`. Logging out is a
+      // POST (`/api/auth/logout`), so it can't be a plain footer link; the
+      // header's AccountSubNav owns that.
+      { href: '/login', label: 'Log in', loggedOutOnly: true },
     ],
   },
   {
@@ -60,9 +63,17 @@ const FOOTER_COLUMNS = [
  *
  * `full` is the real site footer: everything else (landing, dashboard,
  * create, account, results) is a "sell and delight" or "credible" surface
- * per the brand zones, so the standard dark footer belongs there.
+ * per the brand zones, so the standard dark footer belongs there. It reads
+ * the session like `SiteHeader` does, so a logged-in visitor isn't offered
+ * "Log in" two inches below their own name in the header. The one page where
+ * that still shows stale is the `force-static` homepage, where `cookies()` is
+ * empty at build time (see `SiteHeaderStatic`) — it bakes the logged-out
+ * footer, same as it did before this was session-aware.
+ *
+ * The session read is skipped entirely on `minimal`: that variant renders on
+ * the respondent page, which must never touch auth (decision 9).
  */
-export function SiteFooter({ variant = 'full' }) {
+export async function SiteFooter({ variant = 'full' }) {
   if (variant === 'minimal') {
     return (
       <footer className="wrap py-10 text-center text-xs text-muted">
@@ -76,6 +87,7 @@ export function SiteFooter({ variant = 'full' }) {
     );
   }
 
+  const user = await currentUser();
   const year = new Date().getFullYear();
 
   return (
@@ -97,13 +109,15 @@ export function SiteFooter({ variant = 'full' }) {
             <div key={column.heading}>
               <p className="text-xs font-bold uppercase tracking-wider text-white/45">{column.heading}</p>
               <ul className="mt-3 space-y-2 text-sm">
-                {column.links.map((link) => (
-                  <li key={link.href}>
-                    <Link href={link.href} className="text-white/70 hover:text-white">
-                      {link.label}
-                    </Link>
-                  </li>
-                ))}
+                {column.links
+                  .filter((link) => !(link.loggedOutOnly && user))
+                  .map((link) => (
+                    <li key={link.href}>
+                      <Link href={link.href} className="text-white/70 hover:text-white">
+                        {link.label}
+                      </Link>
+                    </li>
+                  ))}
               </ul>
             </div>
           ))}

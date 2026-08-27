@@ -4,7 +4,7 @@ import { LegalPage } from '../../components/LegalPage.js';
 
 export const metadata = { title: 'Privacy Policy — Would You Buy It?' };
 
-const UPDATED = 'August 26, 2026';
+const UPDATED = 'August 27, 2026';
 
 export default function PrivacyPage() {
   return (
@@ -52,7 +52,8 @@ export default function PrivacyPage() {
           </li>
           <li>
             <strong>Payment records</strong> when you unlock a report — the amount, date, and status of the charge.
-            We never see or store your card number; that&apos;s handled entirely by our payment processor, Stripe.
+            We never see or store your card number, billing address, or tax details; the payment itself is sold
+            and billed by Paddle as merchant of record (see below).
           </li>
         </ul>
 
@@ -61,8 +62,15 @@ export default function PrivacyPage() {
         <ul>
           <li><strong>Google</strong> — if you choose to sign in with Google, to verify your identity.</li>
           <li>
-            <strong>Stripe</strong> — to process payment when you unlock a report. Stripe handles your card details
-            directly; we never receive or store them.
+            <strong>Paddle</strong> — our <strong>Merchant of Record</strong>. When you unlock a report, Paddle is
+            the seller of that transaction, not just a processor passing a card number through: it collects your
+            payment details and the billing information it needs to charge the right VAT or sales tax for your
+            country, issues the invoice, and is the controller of that payment data under its own{' '}
+            <a href="https://www.paddle.com/legal/privacy" target="_blank" rel="noopener noreferrer">
+              privacy policy
+            </a>
+            . We never receive or store your card details — only a record that the payment succeeded, plus the
+            amount, date, and status.
           </li>
           <li>
             <strong>Our transactional email provider</strong> — to send sign-in links, if you sign in by email

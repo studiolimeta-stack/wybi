@@ -14,6 +14,43 @@ export function StatTile({ label, value, sub }) {
   );
 }
 
+const PRICE_COLUMNS = ['Price', 'Asked', 'Yes', 'Yes rate', 'Modelled revenue'];
+
+/**
+ * Card, scroll wrapper, header row and footnote — everything about the
+ * per-price table except its data rows. Shared by the real table and by the
+ * locked stand-in below so the paywalled page shows the identical shape
+ * without a second copy of this markup to keep in sync.
+ */
+function PriceTableFrame({ caption, children }) {
+  return (
+    <div className="card overflow-hidden">
+      {/* Scrolls rather than clips: at 390px the five columns do not fit, and
+        * `overflow-hidden` alone put modelled revenue — the headline number of
+        * the paid report — permanently off-screen on a phone. */}
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[30rem] text-sm">
+          {caption && <caption className="sr-only">{caption}</caption>}
+          <thead>
+            <tr className="border-b-2 border-ink bg-locked text-left">
+              {PRICE_COLUMNS.map((label, index) => (
+                <th key={label} className={`p-3 font-bold${index === 0 ? '' : ' text-right'}`}>
+                  {label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>{children}</tbody>
+        </table>
+      </div>
+      <p className="hint p-3 border-t-2 border-ink bg-locked">
+        <strong>Modelled revenue</strong> estimates the relative revenue potential of each tested price based on
+        respondents&apos; answers. It compares prices, not actual revenue.
+      </p>
+    </div>
+  );
+}
+
 /**
  * Per-price results. The bar is the yes-rate; the modelled-revenue column is
  * what actually decides the winner, so it gets its own visual weight.
@@ -22,47 +59,61 @@ export function PriceTable({ priceStats, test, winnerId }) {
   const maxRate = Math.max(...priceStats.map((p) => p.yesRate), 1);
 
   return (
-    <div className="card overflow-hidden">
-      {/* Scrolls rather than clips: at 390px the five columns do not fit, and
-        * `overflow-hidden` alone put modelled revenue — the headline number of
-        * the paid report — permanently off-screen on a phone. */}
-      <div className="overflow-x-auto">
-      <table className="w-full min-w-[30rem] text-sm">
-        <thead>
-          <tr className="border-b-2 border-ink bg-locked text-left">
-            <th className="p-3 font-bold">Price</th>
-            <th className="p-3 font-bold text-right">Asked</th>
-            <th className="p-3 font-bold text-right">Yes</th>
-            <th className="p-3 font-bold text-right">Yes rate</th>
-            <th className="p-3 font-bold text-right">Modelled revenue</th>
-          </tr>
-        </thead>
-        <tbody>
-          {priceStats.map((row) => (
-            <tr key={row.id} className="border-b border-line last:border-0">
-              <td className="p-3 font-extrabold whitespace-nowrap">
-                {formatPrice(row.amount, test.currency, test.billing_type)}
-                {row.id === winnerId && <span className="ml-2 pill bg-accent text-white border-accent">Best</span>}
-              </td>
-              <td className="p-3 text-right tabular-nums">{row.responses}</td>
-              <td className="p-3 text-right tabular-nums">{row.yes}</td>
-              <td className="p-3 text-right">
-                <div className="flex items-center justify-end gap-2">
-                  <span className="h-2 rounded-full bg-yes" style={{ width: `${(row.yesRate / maxRate) * 56}px` }} />
-                  <span className="tabular-nums w-12 text-right">{pct(row.yesRate)}</span>
-                </div>
-              </td>
-              <td className="p-3 text-right font-bold tabular-nums">{money(row.modelledRevenue, test.currency)}</td>
-            </tr>
+    <PriceTableFrame>
+      {priceStats.map((row) => (
+        <tr key={row.id} className="border-b border-line last:border-0">
+          <td className="p-3 font-extrabold whitespace-nowrap">
+            {formatPrice(row.amount, test.currency, test.billing_type)}
+            {row.id === winnerId && <span className="ml-2 pill bg-accent text-white border-accent">Best</span>}
+          </td>
+          <td className="p-3 text-right tabular-nums">{row.responses}</td>
+          <td className="p-3 text-right tabular-nums">{row.yes}</td>
+          <td className="p-3 text-right">
+            <div className="flex items-center justify-end gap-2">
+              <span className="h-2 rounded-full bg-yes" style={{ width: `${(row.yesRate / maxRate) * 56}px` }} />
+              <span className="tabular-nums w-12 text-right">{pct(row.yesRate)}</span>
+            </div>
+          </td>
+          <td className="p-3 text-right font-bold tabular-nums">{money(row.modelledRevenue, test.currency)}</td>
+        </tr>
+      ))}
+    </PriceTableFrame>
+  );
+}
+
+/* Fixed widths, identical on every row: a placeholder must not encode the
+ * value it stands in for. Varying them per row would turn the redaction back
+ * into a (crude) readout of the data it is meant to withhold. */
+const REDACTED_CELL_WIDTHS = ['2rem', '2rem', '3.25rem', '4.5rem'];
+
+/**
+ * What the paywall shows in place of the per-price table.
+ *
+ * This used to be the real `PriceTable` wrapped in a CSS blur, which meant
+ * every asked/yes/yes-rate/modelled-revenue figure of the $14.90 report was
+ * sitting in plain text in the server-rendered HTML of a locked page — legible
+ * to view-source, curl, or reader mode. Paywalled data has to be withheld
+ * server-side, never merely obscured client-side. Only the creator's own price
+ * ladder survives here (they entered it, and each respondent already sees one
+ * of these prices); no analysis of it is rendered at all.
+ */
+export function LockedPriceTable({ variants, test }) {
+  return (
+    <PriceTableFrame caption="Per-price results, locked until you unlock the full report.">
+      {variants.map((variant) => (
+        <tr key={variant.id} className="border-b border-line last:border-0">
+          <td className="p-3 font-extrabold whitespace-nowrap">
+            {formatPrice(variant.amount, test.currency, test.billing_type)}
+          </td>
+          {REDACTED_CELL_WIDTHS.map((width, index) => (
+            <td key={index} className="p-3">
+              <span className="locked-cell ml-auto" style={{ width }} aria-hidden="true" />
+              <span className="sr-only">Locked</span>
+            </td>
           ))}
-        </tbody>
-      </table>
-      </div>
-      <p className="hint p-3 border-t-2 border-ink bg-locked">
-        <strong>Modelled revenue</strong> estimates the relative revenue potential of each tested price based on
-        respondents&apos; answers. It compares prices, not actual revenue.
-      </p>
-    </div>
+        </tr>
+      ))}
+    </PriceTableFrame>
   );
 }
 

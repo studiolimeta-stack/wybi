@@ -246,9 +246,14 @@ h1, h2, h3, .font-extrabold, .font-bold {
   .example-marquee-track { animation: none; }
 }
 
-/* The paywall blur. Values are visible enough to prove data exists, not enough to read. */
-.locked-blur {
-  filter: blur(7px);
+/* A redacted cell on a locked report. Replaced `.locked-blur`, which blurred
+ * the *real* numbers in the browser — i.e. shipped the paid report inside the
+ * HTML of an unpaid page. Nothing is rendered behind this bar to reveal. */
+.locked-cell {
+  display: block;
+  height: 0.7rem;
+  border-radius: 9999px;
+  background: color-mix(in oklab, var(--color-ink) 14%, var(--color-locked));
   user-select: none;
   pointer-events: none;
 }

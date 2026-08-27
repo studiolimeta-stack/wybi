@@ -5,7 +5,7 @@ import { config } from '../../lib/config.js';
 
 export const metadata = { title: 'Terms of Service — Would You Buy It?' };
 
-const UPDATED = 'August 26, 2026';
+const UPDATED = 'August 27, 2026';
 
 export default function TermsPage() {
   return (
@@ -54,9 +54,27 @@ export default function TermsPage() {
 
         <h2>Payments</h2>
         <p>
-          Report unlocks are processed by Stripe. Because an unlock grants immediate access to a fully generated
-          report, purchases are generally final once the report has been unlocked. If something went wrong with a
-          charge, contact us and we&apos;ll sort it out.
+          Our order process is handled by <strong>Paddle.com</strong>, which acts as the <strong>Merchant of
+          Record</strong> for every report unlock. That means Paddle — not WYBI — is the seller for the
+          transaction: Paddle takes the payment, calculates and collects any sales tax or VAT that applies where
+          you are, issues your invoice, and is the name that appears on your card or bank statement. Paddle&apos;s
+          own{' '}
+          <a href="https://www.paddle.com/legal/checkout-buyer-terms" target="_blank" rel="noopener noreferrer">
+            Buyer Terms and Conditions
+          </a>{' '}
+          govern that purchase alongside these terms.
+        </p>
+        <p>
+          The {config.unlockCurrency} ${config.unlockPrice.toFixed(2)} unlock price is what WYBI charges for the
+          report; any tax Paddle has to add is calculated at checkout and shown in the total before you confirm.
+          Because an unlock grants immediate access to a fully generated report, purchases are generally final
+          once the report has been unlocked. If something went wrong with a charge, contact us and we&apos;ll sort
+          it out — billing and refunds are processed through Paddle, and you can also reach Paddle&apos;s buyer
+          support directly at{' '}
+          <a href="https://paddle.net" target="_blank" rel="noopener noreferrer">
+            paddle.net
+          </a>
+          .
         </p>
 
         <h2>Accounts</h2>

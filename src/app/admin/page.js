@@ -188,7 +188,7 @@ export default async function AdminPage({ searchParams }) {
               target="_blank"
               rel="noreferrer"
             >
-              Full analytics →
+              Full analytics
             </a>
           </p>
         </div>

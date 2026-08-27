@@ -4,6 +4,7 @@ import { SiteHeader, SiteFooter } from '../../../components/SiteChrome.js';
 import {
   StatTile,
   PriceTable,
+  LockedPriceTable,
   RecommendationCard,
   ConfidenceBlock,
   SuggestedPriceBlock,
@@ -150,9 +151,10 @@ export default async function ResultsPage({ params }) {
                   recommendation={report.recommendation}
                   token={test.creator_token}
                 />
-                <div className="locked-blur" aria-hidden="true">
-                  <PriceTable priceStats={report.priceStats} test={test} winnerId={null} />
-                </div>
+                {/* Never `report.priceStats` on this branch. A locked report is
+                  * withheld server-side — the numbers must not reach the HTML at
+                  * all, blurred or otherwise (see LockedPriceTable). */}
+                <LockedPriceTable variants={variants} test={test} />
               </>
             ) : (
               <>

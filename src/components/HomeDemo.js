@@ -4,11 +4,11 @@ import { useState } from 'react';
 import { OfferCard } from './OfferCard.js';
 
 const DEMO_IMAGES = [
-  '/brand/demo/sunday-reset-kit-1.webp',
-  '/brand/demo/sunday-reset-kit-2.webp',
-  '/brand/demo/sunday-reset-kit-3.webp',
-  '/brand/demo/sunday-reset-kit-4.webp',
-  '/brand/demo/sunday-reset-kit-5.webp',
+  '/brand/demo/sippod-bottle-1.webp',
+  '/brand/demo/sippod-bottle-2.webp',
+  '/brand/demo/sippod-bottle-3.webp',
+  '/brand/demo/sippod-bottle-4.webp',
+  '/brand/demo/sippod-bottle-5.webp',
 ];
 const CONFIDENCE_OPTIONS = [
   { value: 'maybe', label: 'Maybe', hint: 'Sounds interesting.' },
@@ -17,9 +17,9 @@ const CONFIDENCE_OPTIONS = [
 ];
 
 const DEMO_OFFER = {
-  title: 'The Sunday Reset Kit',
-  description: 'A beautifully designed weekly planning kit that helps you clear your head, organize your priorities, and build better habits—so you can start every Monday feeling calmer, more focused, and ready for the week ahead.',
-  included_items: 'A tactile weekly planning kit for a calmer, more focused Monday.\nUndated weekly planner\n60-minute focus timer\nFour habit-tracker cards\nSteel pen and gift-ready box\nFree shipping',
+  title: 'The SipPod Bottle',
+  description: 'One bottle for hydration and the small essentials that keep you going. SipPod combines a premium insulated bottle with a detachable base pod for snacks, supplements, tea, or anything you’d rather not carry separately.',
+  included_items: '700 ml insulated stainless-steel bottle\nDetachable 180 ml storage pod\nLeak-resistant flip drinking spout\nComfortable silicone grip\nFlexible carry loop\nDesigned for commuting, work and day trips',
   currency: 'USD',
   billing_type: 'one_time',
   image_urls: DEMO_IMAGES,

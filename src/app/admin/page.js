@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { timingSafeEqual } from 'node:crypto';
 import { SiteHeader, SiteFooter } from '../../components/SiteChrome.js';
 import { config, formatPrice } from '../../lib/config.js';
 import { query } from '../../lib/db.js';
@@ -9,8 +8,11 @@ import {
   listPaymentsForAdmin,
   getPaymentSummary,
   isAdminEmail,
+  isValidAdminToken,
 } from '../../lib/admin.js';
+import { getTrafficSummary, getActiveVisitors } from '../../lib/umamiAdmin.js';
 import { currentUser } from '../../lib/session.js';
+import OnlineNow from '../../components/OnlineNow.js';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Admin', robots: { index: false, follow: false } };
@@ -20,14 +22,10 @@ export const metadata = { title: 'Admin', robots: { index: false, follow: false 
  * scripts. The token still works — nothing that used the old ?key= link
  * breaks — but it's no longer the only door. A secret sitting in a URL is one
  * careless paste from leaking; a session is bound to a signed-in browser.
+ * Shared with lib/admin.js so the online-now API route checks the identical
+ * rule instead of a second copy that could drift.
  */
-function isTokenValid(key) {
-  if (typeof key !== 'string') return false;
-  const provided = Buffer.from(key);
-  const expected = Buffer.from(config.adminToken);
-  // Length check first: timingSafeEqual throws on a length mismatch.
-  return provided.length === expected.length && timingSafeEqual(provided, expected);
-}
+const isTokenValid = isValidAdminToken;
 
 async function loadOverview(userFilter) {
   const [tests, responses, funnel, reports, recent] = await Promise.all([
@@ -61,11 +59,13 @@ async function loadOverview(userFilter) {
       COUNT(*) FILTER (WHERE n >= 25)::int AS with_twentyfive
     FROM (SELECT t.id, COUNT(r.id) AS n FROM tests t LEFT JOIN responses r ON r.test_id = t.id GROUP BY t.id) s`);
 
-  const [users, userSummary, payments, paymentSummary] = await Promise.all([
+  const [users, userSummary, payments, paymentSummary, traffic, onlineNow] = await Promise.all([
     listUsersForAdmin({ limit: 100, filter: userFilter }),
     getUserSummary(),
     listPaymentsForAdmin({ limit: 100 }),
     getPaymentSummary(),
+    getTrafficSummary({ days: 30 }),
+    getActiveVisitors(),
   ]);
 
   return {
@@ -79,6 +79,8 @@ async function loadOverview(userFilter) {
     userSummary,
     payments,
     paymentSummary,
+    traffic,
+    onlineNow,
   };
 }
 
@@ -131,6 +133,15 @@ export default async function AdminPage({ searchParams }) {
     return `/admin${qs ? `?${qs}` : ''}`;
   };
 
+  // The online-now poll hits an API route directly (no page reload to carry
+  // a session cookie through), so a token-authed visit has to pass its own
+  // key explicitly — a session-authed visit sends the cookie automatically.
+  const onlineNowQuery = viaToken ? `?key=${encodeURIComponent(key)}` : '';
+
+  // Same token-passthrough rule as adminHref — /admin/users/[id] is a
+  // separate page, not a query param on this one, so it needs its own key.
+  const userHref = (id) => `/admin/users/${id}${viaToken ? `?key=${encodeURIComponent(key)}` : ''}`;
+
   return (
     <>
       <SiteHeader />
@@ -150,6 +161,33 @@ export default async function AdminPage({ searchParams }) {
           </div>
         ))}
       </div>
+
+      {data.traffic && (
+        <div className="grid gap-3 sm:grid-cols-4">
+          <OnlineNow initialVisitors={data.onlineNow} tokenQuery={onlineNowQuery} />
+          {[
+            { label: 'Visitors (30d)', value: data.traffic.visitors },
+            { label: 'Pageviews (30d)', value: data.traffic.pageviews },
+            { label: 'Visits (30d)', value: data.traffic.visits },
+          ].map((tile) => (
+            <div key={tile.label} className="card p-4">
+              <p className="text-xs font-bold uppercase tracking-wider text-muted">{tile.label}</p>
+              <p className="text-2xl font-extrabold">{tile.value}</p>
+            </div>
+          ))}
+          <p className="hint sm:col-span-4">
+            Live from Umami.{' '}
+            <a
+              className="underline"
+              href={`https://mario-umami.crhq.ai/websites/${config.analytics.websiteId}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Full analytics →
+            </a>
+          </p>
+        </div>
+      )}
 
       <div className="card p-5">
         <h2 className="font-extrabold">Distribution — the number that decides V1</h2>
@@ -235,7 +273,9 @@ export default async function AdminPage({ searchParams }) {
                   </span>
                 </td>
                 <td className="py-2">
-                  <p className="font-semibold">{u.name || '—'}</p>
+                  <a href={userHref(u.id)} className="font-semibold underline">
+                    {u.name || u.email}
+                  </a>
                   <p className="hint">
                     {u.email}
                     {!u.email_verified_at && ' ⚠️ unverified'}

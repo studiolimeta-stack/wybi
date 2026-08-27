@@ -2,7 +2,7 @@ import { config } from '../../../../../lib/config.js';
 import { createLoginToken, normaliseEmail, safeRedirect } from '../../../../../lib/auth.js';
 import { checkRateLimit } from '../../../../../lib/tests.js';
 import { clientIp, hashIp } from '../../../../../lib/ids.js';
-import { sendMail, magicLinkEmail } from '../../../../../lib/mailer.js';
+import { sendMail, magicLinkEmail, alertOpsOfSendFailure } from '../../../../../lib/mailer.js';
 import { track } from '../../../../../lib/events.js';
 
 export const runtime = 'nodejs';
@@ -48,6 +48,7 @@ export async function POST(request) {
     });
   } catch (err) {
     console.error(`magic_link_send_failed: ${err.message}`);
+    await alertOpsOfSendFailure('magic-link', err);
     return Response.json({ error: 'Could not send that email right now. Please try again.' }, { status: 502 });
   }
 }

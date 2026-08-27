@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto';
 import { query } from './db.js';
 import { config } from './config.js';
 
@@ -15,6 +16,20 @@ import { config } from './config.js';
  */
 export function isAdminEmail(email) {
   return Boolean(email && config.adminEmails.includes(email.toLowerCase()));
+}
+
+/**
+ * The `?key=` door into /admin, shared with anything that needs the same
+ * scripted/API access (e.g. the online-now polling route) — defined once so
+ * the admin page and its API routes can't drift apart on what counts as a
+ * valid token.
+ */
+export function isValidAdminToken(key) {
+  if (typeof key !== 'string') return false;
+  const provided = Buffer.from(key);
+  const expected = Buffer.from(config.adminToken);
+  // Length check first: timingSafeEqual throws on a length mismatch.
+  return provided.length === expected.length && timingSafeEqual(provided, expected);
 }
 
 /**
@@ -51,6 +66,44 @@ export async function listUsersForAdmin({ limit = 100, filter = 'all' } = {}) {
      ORDER BY u.created_at DESC
      LIMIT $1`,
     [limit],
+  );
+  return rows;
+}
+
+/** Single-user lookup for the /admin/users/[id] detail page. Null if the id doesn't exist. */
+export async function getUserForAdmin(id) {
+  const { rows } = await query(
+    `SELECT u.id, u.email, u.name, u.email_verified_at, u.created_at, u.last_login_at,
+            (SELECT array_agg(DISTINCT i.provider ORDER BY i.provider) FROM identities i WHERE i.user_id = u.id)
+              AS providers,
+            (SELECT COALESCE(SUM(p.amount), 0) FROM payments p WHERE p.user_id = u.id AND p.status = 'succeeded')
+              AS total_paid,
+            (SELECT p.currency FROM payments p WHERE p.user_id = u.id AND p.status = 'succeeded'
+              ORDER BY p.created_at DESC LIMIT 1)
+              AS paid_currency
+     FROM users u
+     WHERE u.id = $1`,
+    [id],
+  );
+  return rows[0] || null;
+}
+
+/**
+ * All of one user's tests for the admin detail page — including archived
+ * ones, unlike lib/tests.js#listTestsByUserId, which is built for the
+ * creator's own /dashboard and deliberately hides those. An admin looking up
+ * an account wants the full history, not just what the owner currently sees.
+ */
+export async function listTestsForUserAdmin(userId) {
+  const { rows } = await query(
+    `SELECT t.id, t.slug, t.title, t.status, t.is_paid, t.currency, t.created_at,
+            t.reported_count, t.creator_token,
+            (SELECT COUNT(*)::int FROM responses r WHERE r.test_id = t.id) AS response_count,
+            (SELECT COUNT(*)::int FROM price_variants pv WHERE pv.test_id = t.id) AS variant_count
+     FROM tests t
+     WHERE t.user_id = $1
+     ORDER BY t.created_at DESC`,
+    [userId],
   );
   return rows;
 }

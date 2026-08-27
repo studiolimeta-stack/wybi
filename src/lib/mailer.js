@@ -1,4 +1,5 @@
 import { config } from './config.js';
+import { checkRateLimit } from './tests.js';
 
 /**
  * Sends transactional mail through Resend when configured. When it is not
@@ -28,6 +29,33 @@ export async function sendMail({ to, subject, html, text }) {
   }
 
   return { sent: true, devMode: false };
+}
+
+/**
+ * Fire-and-forget ops alert when a transactional send fails outright (a real
+ * Resend error, not the dev-mode no-op). Throttled to one per
+ * `config.rateLimits.opsAlert` window via a fixed identifier, so a sustained
+ * outage sends one alert instead of one per failed request. Swallows its own
+ * errors — an alert that itself fails to send must never mask or crash the
+ * original failure path that called it. Note: if the failure is Resend being
+ * fully down or the account quota being exhausted, this alert goes through
+ * the same channel and may not arrive either.
+ */
+export async function alertOpsOfSendFailure(context, err) {
+  const to = config.opsAlertEmail;
+  if (!to) return;
+
+  const allowed = await checkRateLimit('opsAlert', 'ops-alert');
+  if (!allowed) return;
+
+  const subject = `⚠️ WYBI ${context} send failing`;
+  const text = `${context} email send failed:\n\n${err.message}\n\nCheck the Resend dashboard (quota/logs) and \`pm2 logs wouldyoubuyit\`.`;
+
+  try {
+    await sendMail({ to, subject, html: `<pre style="font-family: monospace; white-space: pre-wrap;">${text}</pre>`, text });
+  } catch (alertErr) {
+    console.error(`ops_alert_send_failed: ${alertErr.message}`);
+  }
 }
 
 /** Plain and legible on purpose — a login email is read as often with images off as on. */

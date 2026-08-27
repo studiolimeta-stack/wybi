@@ -5,6 +5,10 @@ import { CURRENCIES } from './pricing.js';
  * Required values are validated once, at import time, so a misconfigured deploy
  * fails at boot instead of on a user's first request.
  */
+// Shared by both `analytics` (client script) and `analyticsAdmin` (server API
+// reads) below — one site, one id, defined once so they can't drift apart.
+const UMAMI_WEBSITE_ID = '1de4e34b-bba0-4920-be72-d79af23b6996';
+
 const required = ['DATABASE_URL', 'SESSION_SECRET', 'ADMIN_TOKEN'];
 const missing = required.filter((key) => !process.env[key]);
 if (missing.length && process.env.NEXT_PHASE !== 'phase-production-build') {
@@ -49,6 +53,10 @@ export const config = {
     // Deliberately tighter than the others — this bucket gates account creation
     // and password-less login, so it protects an inbox/identity, not a vote.
     login: [12, 3600],
+    // Global (not per-IP) throttle on ops failure-alert emails, using a fixed
+    // identifier — see mailer.js#alertOpsOfSendFailure. Caps a sustained
+    // outage at one alert per 6 hours instead of one per failed request.
+    opsAlert: [1, 21600],
   },
 
   currencies: CURRENCIES,
@@ -94,7 +102,28 @@ export const config = {
   analytics: {
     enabled: process.env.APP_URL === 'https://wouldyoubuyit.app',
     scriptUrl: 'https://mario-umami.crhq.ai/script.js',
-    websiteId: '1de4e34b-bba0-4920-be72-d79af23b6996',
+    websiteId: UMAMI_WEBSITE_ID,
+  },
+
+  /**
+   * Server-side Umami *API* access for the /admin traffic card — separate
+   * from `analytics` above, which only emits the client-side tracking
+   * script. Same "optional at boot" shape as google/email/stripe: without
+   * UMAMI_ADMIN_USERNAME/PASSWORD, src/lib/umamiAdmin.js exports resolve to
+   * null and the admin page just omits the card. Talks to the internal port
+   * directly (this VPS only), not the public hostname, so it isn't a second
+   * network hop through nginx/TLS.
+   *
+   * The credential is a full Umami admin login, not a per-site scoped key —
+   * this self-hosted instance only tracks one site today. If a second site
+   * is ever added to it, swap this for a read-only/scoped account first.
+   */
+  analyticsAdmin: {
+    enabled: Boolean(process.env.UMAMI_ADMIN_USERNAME && process.env.UMAMI_ADMIN_PASSWORD),
+    apiUrl: process.env.UMAMI_API_URL || 'http://127.0.0.1:4004',
+    username: process.env.UMAMI_ADMIN_USERNAME || null,
+    password: process.env.UMAMI_ADMIN_PASSWORD || null,
+    websiteId: UMAMI_WEBSITE_ID,
   },
 
   /** The one-time unlock price. Matches the figure already shown on the paywall. */
@@ -113,6 +142,18 @@ export const config = {
     .split(',')
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean),
+
+  /**
+   * Where to send a failure alert when a transactional email (magic-link,
+   * later payment receipts) fails to send outright — not the dev-mode
+   * fallback, an actual Resend error. Defaults to the first admin email so
+   * this doesn't need its own env var; override with OPS_ALERT_EMAIL if that
+   * default is ever wrong. Null (no alert sent) if neither is set.
+   */
+  opsAlertEmail:
+    process.env.OPS_ALERT_EMAIL ||
+    (process.env.ADMIN_EMAILS || '').split(',')[0]?.trim().toLowerCase() ||
+    null,
 };
 
 export { currencySymbol, formatPrice } from './pricing.js';

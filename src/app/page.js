@@ -81,11 +81,11 @@ export default function HomePage() {
             <div className="min-w-0">
             <p className="eyebrow">Pricing research with real people</p>
             <h1 className="mt-4 text-4xl sm:text-6xl font-extrabold tracking-tight leading-[0.98]">
-              Find the price people are most willing to buy at.
+              Find the price people are willing to pay.
             </h1>
             <p className="mt-5 max-w-xl text-base leading-relaxed text-muted">
-              Test different prices without letting people compare them. Each person sees just one price and
-              tells you whether they&apos;d actually buy at that price.
+              Test different prices with real people—without showing them alternatives. Each person sees one
+              price and tells you whether they&apos;d actually buy.
             </p>
 
             <div className="mt-7">
@@ -97,8 +97,8 @@ export default function HomePage() {
                   View demo
                 </Link>
               </div>
-              <span className="hint mt-2 block">Free to create. Free to collect responses.</span>
-              <span className="hint mt-1 block">Pay $14.90 only when you want to unlock the full report.</span>
+              <span className="hint mt-2 block">Free to create and collect responses.</span>
+              <span className="hint mt-1 block">Pay $14.90 only when you unlock the full report.</span>
             </div>
 
             <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-semibold text-muted sm:flex-nowrap sm:gap-x-5 sm:text-sm">
@@ -112,7 +112,7 @@ export default function HomePage() {
               </span>
               <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
                 <CheckIcon className="h-3.5 w-3.5 shrink-0 text-accent sm:h-4 sm:w-4" />
-                Deterministic report
+                Clear price recommendation
               </span>
             </div>
           </div>

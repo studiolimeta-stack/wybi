@@ -6,7 +6,7 @@ import { ProductImageGallery } from './ProductImageGallery.js';
  * The offer as a respondent sees it. Deliberately one component so the
  * homepage demo, the live respondent page and the preview can never drift apart.
  */
-export function OfferCard({ test, price, showPrice = true, children, className = '', titleClassName = '' }) {
+export function OfferCard({ test, price, showPrice = true, priceExtra, children, className = '', titleClassName = '' }) {
   const storedImages = Array.isArray(test.image_urls) ? test.image_urls : [];
   const imageUrls = storedImages.length > 0 ? storedImages : test.image_url ? [test.image_url] : [];
   const items = (test.included_items || '')
@@ -19,7 +19,7 @@ export function OfferCard({ test, price, showPrice = true, children, className =
       {imageUrls.length > 0 && <ProductImageGallery images={imageUrls} presentations={test.image_presentations} />}
 
       <div className={imageUrls.length ? 'p-0 md:pt-1' : 'p-6 sm:p-8'}>
-        <h1 className={`text-2xl font-extrabold tracking-tight ${titleClassName}`}>{test.title}</h1>
+        <h1 className={`text-3xl font-extrabold tracking-tight ${titleClassName}`}>{test.title}</h1>
         <p className="mt-2 text-muted leading-relaxed">{test.description}</p>
 
         {items.length > 0 && (
@@ -48,10 +48,14 @@ export function OfferCard({ test, price, showPrice = true, children, className =
 
         {showPrice && (
           <div className="mt-6 rounded-xl border-2 border-ink bg-[#f4f1ff] p-4">
-            <p className="text-xs font-bold uppercase tracking-wider text-muted">The price you&apos;d pay</p>
+            <p className="text-base font-bold text-ink">Would you buy {test.title} for</p>
             <p className="mt-1 text-5xl font-extrabold tracking-tight">
             {formatPrice(price, test.currency, test.billing_type)}
             </p>
+            {/* Optional slot for the initial ask (question + yes/no buttons) so it
+              * can live in the same box as the price it's asking about, instead of
+              * as a disconnected block underneath — see HomeDemo. */}
+            {priceExtra && <div className="mt-4 border-t border-ink/10 pt-4">{priceExtra}</div>}
           </div>
         )}
 

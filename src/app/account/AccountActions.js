@@ -1,17 +1,18 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 export function AccountActions() {
-  const router = useRouter();
   const [busy, setBusy] = useState(false);
 
   async function logoutEverywhere() {
     setBusy(true);
     await fetch('/api/account/logout-everywhere', { method: 'POST' });
-    router.push('/');
-    router.refresh();
+    // Hard navigation, not router.push()+refresh() — those fire as separate
+    // transitions and race each other, leaving the header rendered from a
+    // stale (still-logged-in) RSC payload even though the cookie is already
+    // gone server-side. A full load has no cache to race. See AccountSubNav.
+    window.location.href = '/';
   }
 
   async function deleteAccount() {
@@ -24,8 +25,7 @@ export function AccountActions() {
     }
     setBusy(true);
     await fetch('/api/account/delete', { method: 'POST' });
-    router.push('/');
-    router.refresh();
+    window.location.href = '/';
   }
 
   return (

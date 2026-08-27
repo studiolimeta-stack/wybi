@@ -25,7 +25,7 @@ export default async function AccountPage() {
   return (
     <>
       <SiteHeader />
-      <main className="wrap inner-page pb-16">
+      <main className="wrap pt-6 pb-16">
         <div className="mx-auto max-w-lg">
           <h1 className="text-3xl font-extrabold tracking-tight">Account</h1>
 

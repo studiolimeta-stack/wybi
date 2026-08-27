@@ -24,7 +24,7 @@ export default async function AdminUserPage({ params, searchParams }) {
     return (
       <>
         <SiteHeader />
-        <main className="wrap py-20">
+        <main className="wrap pt-6 pb-16">
           <h1 className="text-2xl font-extrabold tracking-tight">Admin</h1>
           <p className="mt-2 text-muted">Log in with an admin account to see this page.</p>
         </main>
@@ -40,7 +40,7 @@ export default async function AdminUserPage({ params, searchParams }) {
     return (
       <>
         <SiteHeader />
-        <main className="wrap py-20">
+        <main className="wrap pt-6 pb-16">
           <Link href={backHref} className="hint underline">
             ← Back to admin
           </Link>
@@ -56,7 +56,7 @@ export default async function AdminUserPage({ params, searchParams }) {
   return (
     <>
       <SiteHeader />
-      <main className="wrap py-10 space-y-6">
+      <main className="wrap pt-6 pb-16 space-y-6">
         <Link href={backHref} className="hint underline">
           ← Back to admin
         </Link>

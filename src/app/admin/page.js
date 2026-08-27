@@ -104,7 +104,7 @@ export default async function AdminPage({ searchParams }) {
     return (
       <>
         <SiteHeader />
-        <main className="wrap py-20">
+        <main className="wrap pt-6 pb-16">
           <h1 className="text-2xl font-extrabold tracking-tight">Admin</h1>
           {user ? (
             <p className="mt-2 text-muted">
@@ -150,7 +150,7 @@ export default async function AdminPage({ searchParams }) {
   return (
     <>
       <SiteHeader />
-      <main className="wrap py-10 space-y-6">
+      <main className="wrap pt-6 pb-16 space-y-6">
       <h1 className="text-2xl font-extrabold tracking-tight">Admin</h1>
 
       <div className="grid gap-3 sm:grid-cols-4">

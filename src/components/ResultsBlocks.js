@@ -199,27 +199,84 @@ export function SuggestedPriceBlock({ suggested, test }) {
   );
 }
 
+/** score/100 → good/warn/danger. Mirrors the thresholds `pricingConfidence()` in
+ * lib/stats.js implies (>=70 solid, >=40 directional, below thin) — status colors
+ * are reserved for this one severity signal, never reused on the four-part
+ * breakdown below (those are a magnitude decomposition, not four statuses). */
+const CONFIDENCE_TIERS = [
+  { min: 70, key: 'good', pillClass: 'bg-ok text-white border-ok', fill: 'var(--color-ok)', label: 'Solid — act on this' },
+  { min: 40, key: 'warn', pillClass: 'bg-sun text-ink border-sun', fill: 'var(--color-sun)', label: 'Directional — keep collecting' },
+  { min: 0, key: 'danger', pillClass: 'bg-alert text-white border-alert', fill: 'var(--color-alert)', label: 'Too thin to act on' },
+];
+
+/** A same-ramp meter: fill is `color`, track is a lighter step of that same hue
+ * (never a generic gray) so severity/emphasis reads across the whole bar, per
+ * the meter spec — not just the filled portion. */
+function ConfidenceMeter({ value, max, color, thick = false }) {
+  const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0;
+  // A non-zero score still needs a sliver of visible fill — 100% width maps to
+  // 0px on a 0-width bar otherwise, reading as "no data" for e.g. 1/40.
+  const width = value > 0 ? Math.max(pct, 3) : 0;
+  return (
+    <div
+      className={`w-full overflow-hidden rounded-full ${thick ? 'h-2.5' : 'h-1.5'}`}
+      style={{ background: `color-mix(in oklab, ${color} ${thick ? 16 : 14}%, white)` }}
+      role="progressbar"
+      aria-valuenow={value}
+      aria-valuemin={0}
+      aria-valuemax={max}
+    >
+      <div className="h-full rounded-full" style={{ width: `${width}%`, background: color }} />
+    </div>
+  );
+}
+
+const CONFIDENCE_PARTS = [
+  { key: 'sample', label: 'Sample size', max: 40 },
+  { key: 'balance', label: 'Even split across prices', max: 15 },
+  { key: 'intent', label: 'Strength of intent', max: 25 },
+  { key: 'agreement', label: 'Suggested prices agree with a tested price', max: 20 },
+];
+
 export function PricingConfidenceBlock({ pricingConfidence }) {
   if (!pricingConfidence) return null;
   const { score, parts } = pricingConfidence;
-
-  const verdict =
-    score >= 70 ? 'Solid — you can act on this.' : score >= 40 ? 'Directional. Keep collecting.' : 'Too thin to act on.';
+  const tier = CONFIDENCE_TIERS.find((t) => score >= t.min);
 
   return (
     <div className="card p-6">
-      <h2 className="text-lg font-extrabold tracking-tight">Pricing confidence</h2>
-      <div className="mt-2 flex items-baseline gap-3">
-        <p className="text-4xl font-extrabold tracking-tight">{score}</p>
-        <p className="text-muted">/ 100 — {verdict}</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-lg font-extrabold tracking-tight">Pricing confidence</h2>
+        <span className={`pill ${tier.pillClass}`}>{tier.label}</span>
       </div>
-      <p className="hint mt-3">Built from four things, so you can see exactly why it says what it says:</p>
-      <ul className="mt-2 space-y-1 text-sm">
-        <li>Sample size — <strong>{parts.sample}</strong>/40</li>
-        <li>Even split across prices — <strong>{parts.balance}</strong>/15</li>
-        <li>Strength of intent — <strong>{parts.intent}</strong>/25</li>
-        <li>Suggested prices agree with a tested price — <strong>{parts.agreement}</strong>/20</li>
-      </ul>
+
+      <div className="mt-4 flex items-baseline gap-2">
+        <p className="text-5xl font-extrabold tracking-tight">{score}</p>
+        <p className="text-muted">/ 100</p>
+      </div>
+      <div className="mt-3">
+        <ConfidenceMeter value={score} max={100} color={tier.fill} thick />
+      </div>
+
+      <div className="mt-5 border-t border-line pt-5">
+        <p className="hint">Built from four things, so you can see exactly why it says what it says:</p>
+        <div className="mt-3 space-y-3.5">
+          {CONFIDENCE_PARTS.map((part) => (
+            <div key={part.key}>
+              <div className="flex items-baseline justify-between gap-3 text-sm">
+                <p>{part.label}</p>
+                <p className="shrink-0 tabular-nums">
+                  <strong>{parts[part.key]}</strong>
+                  <span className="text-muted">/{part.max}</span>
+                </p>
+              </div>
+              <div className="mt-1.5">
+                <ConfidenceMeter value={parts[part.key]} max={part.max} color="var(--color-accent)" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

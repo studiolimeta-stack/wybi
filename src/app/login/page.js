@@ -79,7 +79,15 @@ export default async function LoginPage({ searchParams }) {
 
             {mode === 'signup' && (
               <p className="hint mt-5">
-                By continuing you agree to keep it real — this product only works if the answers are honest.
+                By continuing you agree to our{' '}
+                <Link href="/terms" className="underline">
+                  Terms
+                </Link>{' '}
+                and{' '}
+                <Link href="/privacy" className="underline">
+                  Privacy Policy
+                </Link>
+                .
               </p>
             )}
           </div>

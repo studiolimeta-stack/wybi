@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 
 const BASE_TABS = [
   { href: '/dashboard', label: 'My tests' },
@@ -33,13 +33,15 @@ function initialOf(user) {
  */
 export function AccountSubNav({ user, isAdmin = false }) {
   const pathname = usePathname();
-  const router = useRouter();
   const tabs = isAdmin ? [...BASE_TABS, { href: '/admin', label: 'Admin' }] : BASE_TABS;
 
   async function logout() {
     await fetch('/api/auth/logout', { method: 'POST' });
-    router.push('/');
-    router.refresh();
+    // Hard navigation, not router.push()+refresh() — those two fire as
+    // separate transitions and race each other, so the header can render
+    // with the stale (still-logged-in) RSC payload even though the session
+    // cookie is already gone server-side. A full load has no cache to race.
+    window.location.href = '/';
   }
 
   return (

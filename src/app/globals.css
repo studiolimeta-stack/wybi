@@ -37,13 +37,13 @@ html {
   background: var(--color-paper);
   color: var(--color-ink);
   -webkit-text-size-adjust: 100%;
-  scroll-behavior: smooth;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
+  /* Safety net for the `.hero-section` full-bleed trick below: `100vw`
+     includes the vertical scrollbar's width, but the `50%` it's centered
+     against doesn't — on a desktop browser with a normal (non-overlay)
+     scrollbar that mismatch pushes the section a few px past the right edge
+     and creates a phantom horizontal scrollbar. Only vertical scrolling is
+     ever intentional on this site. */
+  overflow-x: hidden;
 }
 
 body {
@@ -67,6 +67,18 @@ h1, h2, h3, .font-extrabold, .font-bold {
 
   .inner-page {
     padding-top: 5rem;
+  }
+
+  /* Horizontally-scrolling row that's still fully scrollable by touch/trackpad —
+     just without the visible scrollbar track some browsers (Android Chrome,
+     desktop Chrome/Edge) draw under an `overflow-x-auto` element. */
+  .scrollbar-none {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* old Edge */
+  }
+
+  .scrollbar-none::-webkit-scrollbar {
+    display: none; /* Chrome, Safari */
   }
 
   .card {

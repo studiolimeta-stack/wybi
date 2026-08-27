@@ -80,7 +80,7 @@ export default async function ResultsPage({ params }) {
   return (
     <>
       <SiteHeader />
-      <main className="wrap inner-page pb-16 space-y-5">
+      <main className="wrap pt-6 pb-16 space-y-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
             <div className="flex items-center gap-2 pt-2">
@@ -100,7 +100,7 @@ export default async function ResultsPage({ params }) {
             * three buttons plus a title don't all fit a 390px screen, and a
             * sideways-scrolling action row reads better than the row breaking
             * onto its own line under the title. */}
-          <div className="-mx-1 flex w-full items-center gap-2 overflow-x-auto px-1 pb-1 sm:w-auto sm:overflow-visible sm:pb-0">
+          <div className="-mx-1 flex w-full items-center gap-2 overflow-x-auto scrollbar-none px-1 pt-2 pb-3 sm:w-auto sm:overflow-visible sm:pt-0 sm:pb-0">
             <Link
               href={`/t/${test.slug}`}
               target="_blank"

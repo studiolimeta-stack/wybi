@@ -15,7 +15,7 @@ export default async function DashboardPage() {
   return (
     <>
       <SiteHeader />
-      <main className="wrap inner-page pb-16">
+      <main className="wrap pt-6 pb-16">
         <h1 className="text-3xl font-extrabold tracking-tight">My tests</h1>
         <p className="hint mt-1">
           {user ? (
@@ -30,25 +30,6 @@ export default async function DashboardPage() {
             </>
           )}
         </p>
-
-        {tests.length > 0 && (
-          <div className="mt-6 grid gap-3 sm:grid-cols-4">
-            {[
-              { label: 'Tests', value: tests.length },
-              { label: 'Active', value: tests.filter((t) => t.status === 'active').length },
-              { label: 'Responses', value: tests.reduce((sum, t) => sum + t.response_count, 0) },
-              {
-                label: 'Unlocked',
-                value: `${tests.filter((t) => t.is_paid).length} of ${tests.length}`,
-              },
-            ].map((tile) => (
-              <div key={tile.label} className="card p-4">
-                <p className="text-xs font-bold uppercase tracking-wider text-muted">{tile.label}</p>
-                <p className="text-2xl font-extrabold">{tile.value}</p>
-              </div>
-            ))}
-          </div>
-        )}
 
         {tests.length === 0 ? (
           <div className="card mt-7 p-6 text-center">
@@ -74,15 +55,25 @@ export default async function DashboardPage() {
                         {test.response_count} {test.response_count === 1 ? 'response' : 'responses'} ·{' '}
                         {test.variant_count} {test.variant_count === 1 ? 'price' : 'prices'} ·{' '}
                         {test.currency}
+                        {!test.is_paid && (
+                          <>
+                            {' '}
+                            · {Math.min(test.response_count, test.free_response_limit)} of{' '}
+                            {test.free_response_limit} free responses used
+                          </>
+                        )}
                       </p>
                     </div>
-                    <span
-                      className={`pill shrink-0 ${
-                        test.status === 'active' ? 'bg-ok text-white border-ok' : 'bg-locked'
-                      }`}
-                    >
-                      {test.status}
-                    </span>
+                    <div className="flex shrink-0 flex-col items-end gap-1.5">
+                      <span
+                        className={`pill ${test.status === 'active' ? 'bg-ok text-white border-ok' : 'bg-locked'}`}
+                      >
+                        {test.status}
+                      </span>
+                      <span className={`pill ${test.is_paid ? 'bg-white' : 'bg-locked'}`}>
+                        {test.is_paid ? 'Paid' : 'Free'}
+                      </span>
+                    </div>
                   </div>
                 </Link>
               ))}

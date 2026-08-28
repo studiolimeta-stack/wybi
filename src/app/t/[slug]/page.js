@@ -74,8 +74,8 @@ export default async function RespondentPage({ params }) {
             Would you buy {test.title}?
           </h1>
         </div>
-        <OfferCard test={test} price={variant.amount}>
-          {existing ? (
+        {existing ? (
+          <OfferCard test={test} price={variant.amount}>
             <div className="card mt-6 p-6 text-center">
               <p className="text-xl font-extrabold tracking-tight">You already answered this one.</p>
               <p className="mt-2 text-muted">
@@ -87,16 +87,18 @@ export default async function RespondentPage({ params }) {
                 Test your own product
               </Link>
             </div>
-          ) : (
-            <RespondFlow
-              slug={test.slug}
-              currencySymbol={currencySymbol(test.currency)}
-              askConfidence={test.ask_confidence}
-              askSuggestedPrice={test.ask_suggested_price}
-              turnstileSiteKey={config.turnstile.enabled ? config.turnstile.siteKey : null}
-            />
-          )}
-        </OfferCard>
+          </OfferCard>
+        ) : (
+          <RespondFlow
+            test={test}
+            price={variant.amount}
+            slug={test.slug}
+            currencySymbol={currencySymbol(test.currency)}
+            askConfidence={test.ask_confidence}
+            askSuggestedPrice={test.ask_suggested_price}
+            turnstileSiteKey={config.turnstile.enabled ? config.turnstile.siteKey : null}
+          />
+        )}
 
         <p className="hint mt-8 text-center">
           One response per person keeps the numbers honest.{' '}

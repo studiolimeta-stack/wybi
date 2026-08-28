@@ -19,8 +19,11 @@ import { getTestByCreatorToken, getPriceVariants, getResponses, isReportLocked }
 import { buildReport, computeAnswerRate, compareRecommendations } from '../../../lib/stats.js';
 import { track, getTestViewCount } from '../../../lib/events.js';
 import { config } from '../../../lib/config.js';
+import { currentUser } from '../../../lib/session.js';
 import { UnlockButton } from './UnlockButton.js';
 import { UnlockToast } from './UnlockToast.js';
+import { ClaimToast } from './ClaimToast.js';
+import { ClaimTestPrompt } from './ClaimTestPrompt.js';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Your results', robots: { index: false, follow: false } };
@@ -128,6 +131,12 @@ export default async function ResultsPage({ params }) {
   // when null, never gated by `locked`: this is traffic data, not part of
   // the paid pricing analysis.
   const answerRate = computeAnswerRate(viewCount, responses.length);
+  // Cross-device claiming (spec §15) — only ever offered when a real session
+  // exists and the test is genuinely unclaimed. Never re-derives ownership
+  // from the token alone; the token only ever proves creator access, not
+  // account identity.
+  const user = await currentUser();
+  const showClaimPrompt = Boolean(user && test.user_id === null);
 
   await track('results_viewed', { testId: test.id });
   if (locked) await track('paywall_viewed', { testId: test.id, props: { responses: responses.length } });
@@ -138,6 +147,8 @@ export default async function ResultsPage({ params }) {
     <>
       <SiteHeader />
       <main className="wrap pt-6 pb-16 space-y-5">
+        <ClaimToast />
+        {showClaimPrompt && <ClaimTestPrompt token={test.creator_token} />}
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
             <div className="flex items-center gap-2 pt-2">

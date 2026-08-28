@@ -101,8 +101,13 @@ export async function revokeAllSessions(userId) {
  * the same address must land in the same account, not a duplicate; that is what
  * step 2 is for.
  *
- * A `users` row may already exist unverified: /create writes one when someone
- * types the optional email. Step 2 adopts it and marks it verified.
+ * Step 2 also defends against any future path that inserts an unverified
+ * `users` row by email without an identity attached (`/create` used to do
+ * exactly that before the "Revised Preview + Account Flow" spec removed it —
+ * every `users` row is created with an identity in the same transaction now,
+ * via step 3, so step 2 is not currently reachable in practice). Left in
+ * place deliberately rather than deleted: it costs nothing and keeps this
+ * function correct if an email-first path is ever reintroduced.
  */
 export async function findOrCreateUserByIdentity({ provider, providerUserId, email, name = null, avatarUrl = null }) {
   const normalised = normaliseEmail(email);

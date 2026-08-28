@@ -3,25 +3,17 @@ import { generateSlug, generateCreatorToken } from './ids.js';
 import { config } from './config.js';
 
 /**
- * `sessionUserId`, when the creator is already logged in, takes priority over
- * the optional email field and skips the upsert entirely — the account is
- * already proven, so there's no reason to touch `users` by email at all. Without
- * this, a test made by a signed-in creator would only reach their account on
- * their *next* login (claiming runs there, not here), and would sit invisible
- * to /account's billing view in the meantime.
+ * `sessionUserId`, when the creator is already logged in, owns the test
+ * immediately. Otherwise the test is genuinely anonymous (`user_id = NULL`) —
+ * `/create` no longer takes an optional email to pre-attach ownership; the
+ * only way to attach a test to an account is the real login/signup flow
+ * (claiming from `wybi_mine`, or the explicit `/r/[token]` cross-device
+ * claim), never an unverified email typed into a form. See the "Revised
+ * Preview + Account Flow" spec, §7.
  */
 export async function createTest(input, { sessionUserId = null } = {}) {
   return transaction(async (client) => {
-    let userId = sessionUserId;
-    if (!userId && input.email) {
-      const { rows } = await client.query(
-        `INSERT INTO users (email) VALUES ($1)
-         ON CONFLICT (email) DO UPDATE SET email = EXCLUDED.email
-         RETURNING id`,
-        [input.email.toLowerCase()],
-      );
-      userId = rows[0].id;
-    }
+    const userId = sessionUserId;
 
     // Slug collisions are astronomically unlikely but cheap to retry.
     let test = null;

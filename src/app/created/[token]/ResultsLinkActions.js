@@ -9,7 +9,7 @@ export function ResultsLinkActions({ resultsUrl }) {
     try {
       await navigator.clipboard.writeText(resultsUrl);
     } catch {
-      window.prompt('Copy your private results link:', resultsUrl);
+      window.prompt('Copy your private link:', resultsUrl);
       return;
     }
 
@@ -18,8 +18,8 @@ export function ResultsLinkActions({ resultsUrl }) {
   }
 
   return (
-    <button type="button" className="btn btn-plain mt-4 w-full sm:w-auto" onClick={copy}>
-      {copied ? 'Copied ✓' : 'Copy results link'}
+    <button type="button" className="btn-ghost mt-3 text-sm" onClick={copy}>
+      {copied ? 'Copied ✓' : 'Copy private link'}
     </button>
   );
 }

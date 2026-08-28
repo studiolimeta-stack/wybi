@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
 import { toThumbUrl } from '../../lib/images.js';
+import { PreviewModal } from './PreviewModal.js';
 
 const CURRENCIES = [
   { code: 'USD', symbol: '$' },
@@ -32,7 +33,6 @@ export function CreateForm() {
     billingType: 'one_time',
     askSuggestedPrice: true,
     askConfidence: true,
-    email: '',
   });
   const [prices, setPrices] = useState(['', '']);
   const [imageUrls, setImageUrls] = useState([]);
@@ -42,6 +42,9 @@ export function CreateForm() {
   const [imageWarning, setImageWarning] = useState(null);
   const [dropActive, setDropActive] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewPrice, setPreviewPrice] = useState(null);
+  const [previewError, setPreviewError] = useState(null);
 
   const symbol = CURRENCIES.find((c) => c.code === form.currency)?.symbol ?? '$';
   const update = (key) => (event) => {
@@ -51,6 +54,33 @@ export function CreateForm() {
 
   function setPriceAt(index, value) {
     setPrices((prev) => prev.map((p, i) => (i === index ? value : p)));
+  }
+
+  /**
+   * Preview has its own lightweight, client-only validation — it must never
+   * reuse the real form's native/server validation path, since fields like
+   * description are required to actually create a test but not to preview
+   * one. Minimum bar: a name and at least one parseable price.
+   */
+  function openPreview() {
+    const title = form.title.trim();
+    let price = null;
+    for (const raw of prices) {
+      const amount = Number.parseFloat(String(raw).replace(',', '.'));
+      if (Number.isFinite(amount) && amount > 0) {
+        price = Math.round(amount * 100) / 100;
+        break;
+      }
+    }
+
+    if (title.length < 2 || price === null) {
+      setPreviewError('Add a name and at least one price to preview.');
+      return;
+    }
+
+    setPreviewError(null);
+    setPreviewPrice(price);
+    setPreviewOpen(true);
   }
 
   // Images are shown uncropped in a 4:3 frame (never cropped — a cut-off product
@@ -431,31 +461,44 @@ export function CreateForm() {
         </label>
       </div>
 
-      <div className="card p-6">
-        <label className="label" htmlFor="email">
-          Your email <span className="hint font-normal">(optional)</span>
-        </label>
-        <input
-          id="email"
-          type="email"
-          className="field"
-          value={form.email}
-          onChange={update('email')}
-          placeholder="you@example.com"
-          maxLength={200}
-        />
-        <p className="hint mt-1">
-          Only used to recover your results link. We never show it to respondents and never email you
-          anything else.
-        </p>
-        {errors.email && <p className="err">{errors.email}</p>}
-      </div>
-
       {errors.form && <p className="err">{errors.form}</p>}
 
-      <button type="submit" className="btn btn-primary w-full text-lg" disabled={submitting || uploading}>
-        {submitting ? 'Creating…' : 'Create my test'}
-      </button>
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <button
+          type="button"
+          className="btn btn-plain w-full text-lg sm:w-auto sm:flex-1"
+          onClick={openPreview}
+          disabled={submitting}
+        >
+          Preview test
+        </button>
+        <button
+          type="submit"
+          className="btn btn-primary w-full text-lg sm:flex-1"
+          disabled={submitting || uploading}
+        >
+          {submitting ? 'Creating…' : 'Create my test'}
+        </button>
+      </div>
+      {previewError && <p className="err text-center">{previewError}</p>}
+
+      {previewOpen && (
+        <PreviewModal
+          offer={{
+            title: form.title,
+            description: form.description,
+            included_items: form.includedItems,
+            product_url: form.productUrl,
+            currency: form.currency,
+            billing_type: form.billingType,
+            image_urls: imageUrls,
+          }}
+          price={previewPrice}
+          askConfidence={form.askConfidence}
+          askSuggestedPrice={form.askSuggestedPrice}
+          onClose={() => setPreviewOpen(false)}
+        />
+      )}
     </form>
   );
 }

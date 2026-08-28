@@ -10,7 +10,6 @@ const LIMITS = {
   description: 400,
   includedItems: 600,
   productUrl: 500,
-  email: 200,
 };
 const MAX_IMAGES = 5;
 
@@ -85,11 +84,6 @@ export function validateTestInput(body) {
     errors.prices = `Test up to ${config.maxPriceVariants} prices in one go.`;
   }
 
-  let email = cleanText(body.email, LIMITS.email).toLowerCase() || null;
-  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
-    errors.email = 'That email does not look right.';
-  }
-
   const suppliedImages = Array.isArray(body.imageUrls)
     ? body.imageUrls
     : typeof body.imageUrl === 'string'
@@ -118,7 +112,6 @@ export function validateTestInput(body) {
       prices: prices.sort((a, b) => a - b),
       askSuggestedPrice: body.askSuggestedPrice !== false,
       askConfidence: body.askConfidence !== false,
-      email,
     },
   };
 }

@@ -119,18 +119,29 @@ export default async function ResultsPage({ params }) {
     getResponses(test.id),
     getTestViewCount(test.id),
   ]);
-  const report = buildReport(variants, responses);
+  const report = buildReport(variants, responses, test);
   const locked = isReportLocked(test, responses.length);
   // Stable and deterministic without persisting anything: getResponses()
   // already returns rows ORDER BY created_at, and free_response_limit is
   // fixed on a test at creation time, so "the first N responses" is the same
   // slice forever — this can never silently drift as more responses arrive.
-  const freeReport = locked ? buildReport(variants, responses.slice(0, test.free_response_limit)) : null;
+  const freeReport = locked
+    ? buildReport(variants, responses.slice(0, test.free_response_limit), test)
+    : null;
   // null unless the underlying view-tracking data can support an honest
   // percentage (see computeAnswerRate's own doc comment) — never rendered
   // when null, never gated by `locked`: this is traffic data, not part of
   // the paid pricing analysis.
   const answerRate = computeAnswerRate(viewCount, responses.length);
+  // Responses + Overall purchase intent always show; Strong purchase intent
+  // needs `ask_confidence` on (otherwise every confidence is null and the
+  // tile would show a fake, real-looking 0%) and Answer rate needs
+  // answer-rate data to exist (see computeAnswerRate) — so the tile count
+  // ranges 2–4 and the grid's column count has to track it, or the grid
+  // leaves an empty cell / stretches a lone tile full-width.
+  const statTileCount = 2 + (test.ask_confidence ? 1 : 0) + (answerRate !== null ? 1 : 0);
+  const statTileGridCols =
+    statTileCount === 4 ? 'sm:grid-cols-4' : statTileCount === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2';
   // Cross-device claiming (spec §15) — only ever offered when a real session
   // exists and the test is genuinely unclaimed. Never re-derives ownership
   // from the token alone; the token only ever proves creator access, not
@@ -215,18 +226,20 @@ export default async function ResultsPage({ params }) {
           </div>
         ) : (
           <>
-            <div className={answerRate !== null ? 'grid gap-3 sm:grid-cols-4' : 'grid gap-3 sm:grid-cols-3'}>
+            <div className={`grid gap-3 ${statTileGridCols}`}>
               <StatTile label="Responses" value={responses.length} />
               <StatTile
                 label="Overall purchase intent"
                 value={pct(report.confidence.yesRate)}
                 sub="The optimistic number"
               />
-              <StatTile
-                label="Strong purchase intent"
-                value={pct(report.confidence.strongRate)}
-                sub="The honest number"
-              />
+              {test.ask_confidence && (
+                <StatTile
+                  label="Strong purchase intent"
+                  value={pct(report.confidence.strongRate)}
+                  sub="The honest number"
+                />
+              )}
               {answerRate !== null && (
                 <StatTile
                   label="Answer rate"

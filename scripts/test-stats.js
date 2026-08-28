@@ -171,6 +171,94 @@ test('pricing confidence header always equals the sum of its own rounded parts',
   assert.equal(result.score, 24);
 });
 
+test('pricing confidence: a disabled ask_confidence follow-up is excluded, not scored 0', () => {
+  // Same fixture as above, but the creator turned "Ask how serious they
+  // are" off — confidence.strongRate is 0 not because nobody showed strong
+  // intent, but because the question was never asked. The intent component
+  // must disappear from the score entirely (not contribute a 0/25), and the
+  // remaining sample+balance+agreement components (9+5+10 = 24 of a possible
+  // 40+15+20 = 75) renormalise onto 0–100.
+  const priceStats = [
+    { amount: 19, responses: 10 },
+    { amount: 29, responses: 33 },
+  ];
+  const confidence = { strongRate: 0 };
+  const suggested = { count: 0, median: 0 };
+
+  const result = pricingConfidence(priceStats, confidence, suggested, { askConfidence: false });
+
+  assert.equal('intent' in result.parts, false, 'excluded component must have no key at all');
+  assert.equal(result.parts.sample, 9);
+  assert.equal(result.parts.balance, 5);
+  assert.equal(result.parts.agreement, 10);
+  assert.equal(result.score, Math.round((24 / 75) * 100));
+  assert.equal(result.score, 32);
+});
+
+test('pricing confidence: a disabled ask_suggested_price follow-up gets no synthetic 10/20', () => {
+  // With both follow-ups enabled and no suggested-price data, `agreement`
+  // silently defaults to a neutral 10/20 (asked, just no data yet — see the
+  // "enabled but no usable data" test below). Disabling the question
+  // outright must not hand out that same 10 by accident.
+  const priceStats = [
+    { amount: 19, responses: 10 },
+    { amount: 29, responses: 33 },
+  ];
+  const confidence = { strongRate: 0 };
+  const suggested = { count: 0, median: 0 };
+
+  const result = pricingConfidence(priceStats, confidence, suggested, { askSuggestedPrice: false });
+
+  assert.equal('agreement' in result.parts, false, 'excluded component must have no key at all');
+  assert.equal(result.parts.sample, 9);
+  assert.equal(result.parts.balance, 5);
+  assert.equal(result.parts.intent, 0);
+  // 9 + 5 + 0 = 14 of a possible 40 + 15 + 25 = 80.
+  assert.equal(result.score, Math.round((14 / 80) * 100));
+  assert.equal(result.score, 18);
+});
+
+test('pricing confidence: both follow-ups disabled scores only sample + balance', () => {
+  const priceStats = [
+    { amount: 19, responses: 10 },
+    { amount: 29, responses: 33 },
+  ];
+  const confidence = { strongRate: 0 };
+  const suggested = { count: 0, median: 0 };
+
+  const result = pricingConfidence(priceStats, confidence, suggested, {
+    askConfidence: false,
+    askSuggestedPrice: false,
+  });
+
+  assert.deepEqual(Object.keys(result.parts).sort(), ['balance', 'sample']);
+  // 9 + 5 = 14 of a possible 40 + 15 = 55.
+  assert.equal(result.score, Math.round((14 / 55) * 100));
+  assert.ok(result.score >= 0 && result.score <= 100);
+});
+
+test('pricing confidence: enabled but no usable data still uses the existing no-data behaviour', () => {
+  // Distinct from the disabled case above — the follow-up IS enabled, there
+  // just happen to be no confidence answers / suggested prices yet. This
+  // must keep behaving exactly as it did before this fix: a real 0 for
+  // intent, a neutral 10 default for agreement, both counted in the score.
+  const priceStats = [
+    { amount: 19, responses: 10 },
+    { amount: 29, responses: 33 },
+  ];
+  const confidence = { strongRate: 0 };
+  const suggested = { count: 0, median: 0 };
+
+  const result = pricingConfidence(priceStats, confidence, suggested, {
+    askConfidence: true,
+    askSuggestedPrice: true,
+  });
+
+  assert.equal(result.parts.intent, 0);
+  assert.equal(result.parts.agreement, 10);
+  assert.equal(result.score, 24);
+});
+
 test('answer rate: normal case computes a plain percentage', () => {
   assert.equal(computeAnswerRate(12, 11), (11 / 12) * 100);
   assert.ok(Math.abs(computeAnswerRate(12, 11) - 91.6666) < 0.001);

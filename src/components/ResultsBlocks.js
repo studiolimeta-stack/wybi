@@ -476,6 +476,14 @@ export function PricingConfidenceBlock({ pricingConfidence }) {
   const { score, parts } = pricingConfidence;
   const tier = CONFIDENCE_TIERS.find((t) => score >= t.min);
 
+  // A part with no key in `parts` was excluded by `pricingConfidence()`
+  // because the creator turned that follow-up off for this test — not
+  // because it scored 0. The breakdown has to mirror the calculation
+  // exactly (WYBY follow-up fix): an excluded component gets a "not asked"
+  // row here, never a bar and never a fake score.
+  const visibleParts = CONFIDENCE_PARTS.filter((part) => parts[part.key] !== undefined);
+  const hasExcludedParts = visibleParts.length < CONFIDENCE_PARTS.length;
+
   return (
     <div className="card p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -492,23 +500,40 @@ export function PricingConfidenceBlock({ pricingConfidence }) {
       </div>
 
       <div className="mt-5 border-t border-line pt-5">
-        <p className="hint">Built from four things, so you can see exactly why it says what it says:</p>
+        <p className="hint">
+          {hasExcludedParts
+            ? 'Built from the questions this test actually asked, so you can see exactly why it says what it says:'
+            : 'Built from four things, so you can see exactly why it says what it says:'}
+        </p>
         <div className="mt-3 space-y-3.5">
-          {CONFIDENCE_PARTS.map((part) => (
-            <div key={part.key}>
-              <div className="flex items-baseline justify-between gap-3 text-sm">
-                <p>{part.label}</p>
-                <p className="shrink-0 tabular-nums">
-                  <strong>{parts[part.key]}</strong>
-                  <span className="text-muted">/{part.max}</span>
-                </p>
+          {CONFIDENCE_PARTS.map((part) => {
+            const value = parts[part.key];
+            const asked = value !== undefined;
+            return (
+              <div key={part.key}>
+                <div className="flex items-baseline justify-between gap-3 text-sm">
+                  <p className={asked ? '' : 'text-muted'}>{part.label}</p>
+                  {asked ? (
+                    <p className="shrink-0 tabular-nums">
+                      <strong>{value}</strong>
+                      <span className="text-muted">/{part.max}</span>
+                    </p>
+                  ) : (
+                    <p className="shrink-0 text-muted italic">Not asked for this test</p>
+                  )}
+                </div>
+                {asked && (
+                  <div className="mt-1.5">
+                    <ConfidenceMeter value={value} max={part.max} color="var(--color-accent)" />
+                  </div>
+                )}
               </div>
-              <div className="mt-1.5">
-                <ConfidenceMeter value={parts[part.key]} max={part.max} color="var(--color-accent)" />
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
+        {hasExcludedParts && (
+          <p className="hint mt-4">Score based on the questions included in this test.</p>
+        )}
       </div>
     </div>
   );

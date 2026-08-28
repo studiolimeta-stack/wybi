@@ -145,8 +145,24 @@ export function summariseConfidence(responses) {
  * Pricing Confidence, 0–100. PRD §27 allows dropping this if it turns
  * arbitrary — so it is deliberately built from four visible, boring inputs
  * and the UI shows the breakdown rather than just the number.
+ *
+ * `askConfidence`/`askSuggestedPrice` mirror the test's own follow-up
+ * toggles. A follow-up the creator turned off is not "answered badly" — it
+ * was never asked — so its component is dropped from BOTH the earned and
+ * the available points and the remaining components are renormalised back
+ * onto the 0–100 scale, rather than either scoring it 0 (a false penalty)
+ * or handing it a synthetic neutral value (a false credit). This is
+ * distinct from "asked but no usable answers yet" (e.g. zero yes responses
+ * with `askConfidence` on): that case keeps scoring the real, computed
+ * value — including a real 0 — same as before. Only an actually-disabled
+ * follow-up is excluded from the denominator.
  */
-export function pricingConfidence(priceStats, confidence, suggested) {
+export function pricingConfidence(
+  priceStats,
+  confidence,
+  suggested,
+  { askConfidence = true, askSuggestedPrice = true } = {},
+) {
   const totalResponses = priceStats.reduce((sum, p) => sum + p.responses, 0);
   if (!totalResponses) return null;
 
@@ -170,17 +186,33 @@ export function pricingConfidence(priceStats, confidence, suggested) {
     agreementScore = Math.max(0, 1 - nearest / (spread || 1)) * 20;
   }
 
-  // Round each part first, then derive the header from those rounded parts —
-  // never from the raw sum. Rounding the sum independently of the parts is
-  // exactly how a header can disagree with the breakdown sitting right below
-  // it (e.g. a raw 79.4 rounds to 79 while its four rounded parts sum to 80).
-  const parts = {
-    sample: Math.round(sampleScore),
-    balance: Math.round(balanceScore),
-    intent: Math.round(intentScore),
-    agreement: Math.round(agreementScore),
-  };
-  const score = Math.max(0, Math.min(100, parts.sample + parts.balance + parts.intent + parts.agreement));
+  // Sample size and balance are always applicable — they describe the
+  // response set itself, not a follow-up question. Only intent/agreement
+  // are gated on their respective toggles.
+  const components = [
+    { key: 'sample', enabled: true, earned: sampleScore, max: 40 },
+    { key: 'balance', enabled: true, earned: balanceScore, max: 15 },
+    { key: 'intent', enabled: askConfidence, earned: intentScore, max: 25 },
+    { key: 'agreement', enabled: askSuggestedPrice, earned: agreementScore, max: 20 },
+  ];
+  const active = components.filter((c) => c.enabled);
+
+  // Round each active part first, then derive the header from those rounded
+  // parts — never from the raw sum. Rounding the sum independently of the
+  // parts is exactly how a header can disagree with the breakdown sitting
+  // right below it (e.g. a raw 79.4 rounds to 79 while its four rounded
+  // parts sum to 80). A disabled part has no key in `parts` at all — the UI
+  // uses that absence to render "not asked" instead of a bar/score.
+  const parts = {};
+  active.forEach((c) => {
+    parts[c.key] = Math.round(c.earned);
+  });
+
+  const earnedPoints = active.reduce((sum, c) => sum + parts[c.key], 0);
+  const availablePoints = active.reduce((sum, c) => sum + c.max, 0);
+  const score =
+    availablePoints > 0 ? Math.max(0, Math.min(100, Math.round((earnedPoints / availablePoints) * 100))) : 0;
+
   return { score, parts };
 }
 
@@ -217,18 +249,26 @@ export function compareRecommendations(freeRecommendation, currentRecommendation
   return 'leader_holding';
 }
 
-export function buildReport(variants, responses) {
+/**
+ * `test` supplies `ask_confidence`/`ask_suggested_price` so `pricingConfidence`
+ * can exclude a disabled follow-up's component instead of scoring it as a
+ * bad answer. Optional (defaults both toggles on) so any other caller that
+ * doesn't have a `test` row yet keeps today's full-weight behaviour.
+ */
+export function buildReport(variants, responses, test = {}) {
   const priceStats = summarisePriceVariants(variants, responses);
   const confidence = summariseConfidence(responses);
   const suggested = summariseSuggestedPrices(responses);
   const recommendation = recommendPrice(priceStats);
+  const askConfidence = test.ask_confidence !== false;
+  const askSuggestedPrice = test.ask_suggested_price !== false;
 
   return {
     priceStats,
     confidence,
     suggested,
     recommendation,
-    pricingConfidence: pricingConfidence(priceStats, confidence, suggested),
+    pricingConfidence: pricingConfidence(priceStats, confidence, suggested, { askConfidence, askSuggestedPrice }),
     totalResponses: responses.length,
   };
 }

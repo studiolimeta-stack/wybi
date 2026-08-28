@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { OfferCard } from '../../components/OfferCard.js';
 
 const CONFIDENCE_OPTIONS = [
@@ -10,10 +10,17 @@ const CONFIDENCE_OPTIONS = [
 ];
 
 /**
- * Preview mode (spec §4-5). Reuses `OfferCard` and the same
- * ask → confidence/suggest → done state machine as `HomeDemo`/`RespondFlow`
- * instead of a second visual implementation — the whole point is that a
- * creator sees exactly what a respondent will see.
+ * Preview mode (spec §4-5). Must render *exactly* what a respondent sees on
+ * `/t/[slug]` — same `.wrap` container (72rem), same heading pattern, same
+ * `OfferCard` + ask/confidence/suggest/done steps `RespondFlow`/`HomeDemo`
+ * use. Earlier versions of this component wrapped everything in an
+ * additional `max-w-2xl` (42rem) container "for the modal" — that squeezed
+ * OfferCard's two-column image/content grid and the yes/no button grid
+ * inside it into roughly half the width the real page gives them, which is
+ * why the pill-shaped `.btn-answer` buttons rendered as near-circles instead
+ * of the real page's wide rectangles. `/t/[slug]/page.js` only ever applies
+ * `max-w-2xl` to the *heading*, never to `OfferCard` itself — copy that
+ * exactly, not a guessed-at modal width.
  *
  * Fully local, no persistence: never calls `/api/respond`, never touches
  * `wybi_mine`, never generates a token. `offer`/`price` are just the
@@ -24,6 +31,14 @@ export function PreviewModal({ offer, price, askConfidence, askSuggestedPrice, o
   const [answer, setAnswer] = useState(null);
   const [suggestedPrice, setSuggestedPrice] = useState('');
   const symbol = offer.currency === 'EUR' ? '€' : offer.currency === 'GBP' ? '£' : '$';
+
+  useEffect(() => {
+    function onKeyDown(event) {
+      if (event.key === 'Escape') onClose();
+    }
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [onClose]);
 
   function chooseAnswer(value) {
     setAnswer(value);
@@ -37,21 +52,25 @@ export function PreviewModal({ offer, price, askConfidence, askSuggestedPrice, o
   }
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="Preview test"
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink/60 p-4 py-8 sm:py-14"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-    >
-      <div className="w-full max-w-2xl">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border-2 border-ink bg-[#fff8f0] px-4 py-3">
+    <div role="dialog" aria-modal="true" aria-label="Preview test" className="fixed inset-0 z-50 overflow-y-auto bg-paper">
+      {/* Stands in for the site header the real /t/[slug] page never renders
+        * (decision 9) — this is the one piece of chrome that's allowed to
+        * differ from the real page, since it's what makes this a preview
+        * and not a live link. */}
+      <div className="sticky top-0 z-10 border-b-2 border-ink bg-locked">
+        <div className="wrap flex flex-wrap items-center justify-between gap-3 py-3">
           <p className="text-sm font-bold">Preview mode — responses won&apos;t be saved.</p>
           <button type="button" className="btn btn-plain px-3 py-2 text-sm" onClick={onClose}>
             Back to editing
           </button>
+        </div>
+      </div>
+
+      <main className="wrap py-8 sm:py-14">
+        <div className="mx-auto mb-6 max-w-2xl text-center">
+          <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
+            Would you buy {offer.title || 'this'}?
+          </h1>
         </div>
 
         <OfferCard
@@ -138,10 +157,12 @@ export function PreviewModal({ offer, price, askConfidence, askSuggestedPrice, o
           }
         />
 
-        <button type="button" className="btn btn-plain mt-4 w-full sm:w-auto" onClick={onClose}>
-          Back to editing
-        </button>
-      </div>
+        <p className="hint mt-8 text-center">
+          <button type="button" className="underline" onClick={onClose}>
+            Back to editing
+          </button>
+        </p>
+      </main>
     </div>
   );
 }

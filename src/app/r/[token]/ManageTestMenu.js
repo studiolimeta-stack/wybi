@@ -3,8 +3,10 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
+import { Pause, Play, Download, Trash2 } from 'lucide-react';
 
-const menuItem = 'block w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold hover:bg-locked';
+const menuItem =
+  'flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold hover:bg-locked';
 const PANEL_WIDTH = 256; // matches w-64 below — kept as a number so the position math can clamp against it
 const VIEWPORT_MARGIN = 8;
 
@@ -17,12 +19,11 @@ const VIEWPORT_MARGIN = 8;
  *
  * A real dropdown at every breakpoint, including mobile — rendered through a
  * portal into `document.body` with computed `position: fixed` coordinates,
- * not nested inside the button's own DOM position. It has to be: the button
- * row this lives in scrolls horizontally on mobile (`overflow-x-auto`), and
- * CSS forces `overflow-y` to clip too the moment `overflow-x` is set to
- * anything but `visible`. An in-place `absolute` dropdown would get its panel
- * clipped below the button on that row. Escaping via a portal sidesteps the
- * clipping entirely instead of trading the dropdown for a modal on mobile.
+ * not nested inside the button's own DOM position. That sidesteps any
+ * ancestor `overflow`/`z-index` stacking context clipping or burying the
+ * panel (the button row this lives in wraps rather than scrolls on mobile,
+ * but the portal approach is the more robust default regardless of that)
+ * instead of trading the dropdown for a modal on mobile.
  */
 export function ManageTestMenu({ token, status, locked }) {
   const [open, setOpen] = useState(false);
@@ -116,10 +117,12 @@ export function ManageTestMenu({ token, status, locked }) {
           >
             {status === 'active' ? (
               <button type="button" disabled={busy} className={menuItem} onClick={() => setStatus('paused')}>
+                <Pause className="h-4 w-4 shrink-0" />
                 Pause test
               </button>
             ) : (
               <button type="button" disabled={busy} className={menuItem} onClick={() => setStatus('active')}>
+                <Play className="h-4 w-4 shrink-0" />
                 Resume test
               </button>
             )}
@@ -129,12 +132,16 @@ export function ManageTestMenu({ token, status, locked }) {
               href={locked ? '#' : `/api/tests/${token}/export`}
               onClick={() => setOpen(false)}
             >
+              <Download className="h-4 w-4 shrink-0" />
               Export CSV
             </a>
 
             {/* Destructive, so it must not wear the brand purple every primary
-              * action uses — text-alert is the only red the palette allows for text. */}
+              * action uses — text-alert is the only red the palette allows for text.
+              * Icon uses currentColor (lucide default), so text-alert on the button
+              * colors both the label and the icon together. */}
             <button type="button" disabled={busy} className={`${menuItem} text-alert`} onClick={remove}>
+              <Trash2 className="h-4 w-4 shrink-0" />
               Delete test
             </button>
           </div>,

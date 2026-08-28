@@ -15,7 +15,7 @@ import { ShareTestButton } from './ShareTestButton.js';
 import { getTestByCreatorToken, getPriceVariants, getResponses, isReportLocked } from '../../../lib/tests.js';
 import { buildReport } from '../../../lib/stats.js';
 import { track } from '../../../lib/events.js';
-import { config } from '../../../lib/config.js';
+import { config, formatPrice } from '../../../lib/config.js';
 import { UnlockButton } from './UnlockButton.js';
 
 export const dynamic = 'force-dynamic';
@@ -97,18 +97,24 @@ export default async function ResultsPage({ params }) {
           {/* All three land here, next to the title, so they're usable the instant
             * you land on the page — not a link buried under the report, not a
             * "Manage" card at the very bottom you'd only see after scrolling past
-            * everything. Scrolls horizontally rather than wrapping below `sm` —
-            * three buttons plus a title don't all fit a 390px screen, and a
-            * sideways-scrolling action row reads better than the row breaking
-            * onto its own line under the title.
+            * everything.
             *
-            * `.scroll-hint-x` is what makes that scroll discoverable: with the
-            * scrollbar hidden, the row previously looked like it just ended at
-            * the screen edge, so "Manage this test" — and the CSV export
-            * inside it — was invisible on a 390px phone. The fade shows the
-            * row running under the edge; `pr-12` is wider than the fade, so
-            * scrolling to the end leaves the last button fully solid. */}
-          <div className="scroll-hint-x -mx-1 flex w-full items-center gap-2 overflow-x-auto scrollbar-none pt-2 pb-3 pl-1 pr-12 sm:w-auto sm:overflow-visible sm:pt-0 sm:pr-1 sm:pb-0">
+            * Wraps onto its own line(s) below `sm` rather than scrolling
+            * horizontally, which is what this used to do. That approach
+            * (`.scroll-hint-x`, a fade meant to hint more buttons sat
+            * off-screen) is gone on purpose, not just for style: it faded a
+            * white pill-button into a near-white page background (#FFFDF9
+            * into #FFF8F0) with almost no contrast to fade across — a
+            * masked-vs-unmasked screenshot diff measured the effect at
+            * ~0.68% mean pixel difference, imperceptible at any mask
+            * strength. The real-world result was "Manage this test" — and
+            * the CSV export inside it — silently unreachable on a 390px
+            * phone with zero visible cue that anything was off-screen.
+            * Don't reintroduce a scroll+fade fix for this row without a
+            * genuinely visible, color-independent affordance (e.g. a
+            * chevron icon) to pair with it — a fade alone will not read as
+            * discoverable against this palette no matter how it's tuned. */}
+          <div className="flex w-full flex-wrap items-center gap-2 pt-2 pb-3 sm:w-auto sm:flex-nowrap sm:pt-0 sm:pb-0">
             <Link
               href={`/t/${test.slug}`}
               target="_blank"
@@ -134,9 +140,26 @@ export default async function ResultsPage({ params }) {
           </div>
         ) : (
           <>
+            {/* The answer, before the meta-stats. A founder who paid $14.90 wants
+              * "what do I charge" first, not three abstract numbers before it —
+              * only shown once we're actually willing to name a winner (same
+              * `enoughData` gate RecommendationCard itself uses below), and only
+              * on the unlocked path: a locked report hasn't been paid for, so it
+              * gets the paywall's teaser copy instead, never this. */}
+            {!locked && report.recommendation.enoughData && (
+              <p className="text-xl sm:text-2xl font-extrabold tracking-tight">
+                Charge {formatPrice(report.recommendation.winner.amount, test.currency, test.billing_type)} —
+                highest modelled revenue in your test.
+              </p>
+            )}
+
             <div className="grid gap-3 sm:grid-cols-3">
               <StatTile label="Responses" value={responses.length} />
-              <StatTile label="Overall purchase intent" value={pct(report.confidence.yesRate)} />
+              <StatTile
+                label="Overall purchase intent"
+                value={pct(report.confidence.yesRate)}
+                sub="The optimistic number"
+              />
               <StatTile
                 label="Strong purchase intent"
                 value={pct(report.confidence.strongRate)}

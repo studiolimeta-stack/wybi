@@ -1,64 +1,107 @@
 import Link from 'next/link';
+import { ChevronDown } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { SiteHeader, SiteFooter } from '../../../components/SiteChrome.js';
+import { CheckIcon } from '../../../components/CheckIcon.js';
 import {
   StatTile,
   PriceTable,
-  LockedPriceTable,
+  LockedReportPreview,
   RecommendationCard,
   ConfidenceBlock,
   SuggestedPriceBlock,
   PricingConfidenceBlock,
+  FreeProgressBanner,
 } from '../../../components/ResultsBlocks.js';
 import { ManageTestMenu } from './ManageTestMenu.js';
 import { ShareTestButton } from './ShareTestButton.js';
 import { getTestByCreatorToken, getPriceVariants, getResponses, isReportLocked } from '../../../lib/tests.js';
-import { buildReport, computeAnswerRate } from '../../../lib/stats.js';
+import { buildReport, computeAnswerRate, compareRecommendations } from '../../../lib/stats.js';
 import { track, getTestViewCount } from '../../../lib/events.js';
-import { config, formatPrice } from '../../../lib/config.js';
+import { config } from '../../../lib/config.js';
 import { UnlockButton } from './UnlockButton.js';
+import { UnlockToast } from './UnlockToast.js';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Your results', robots: { index: false, follow: false } };
 
 const pct = (value) => `${value.toFixed(value >= 10 ? 0 : 1)}%`;
 
-function Paywall({ responseCount, recommendation, token }) {
-  // Never promise a winning price we cannot actually compute yet — paying and
-  // landing on "not enough data" is how you earn a refund request.
-  const supportingCopy = !recommendation.enoughData
-    ? `Your responses are already collected. Unlock the full analysis to see how each price performed. Keep collecting before we name a best-performing price.`
-    : 'Your responses are already collected. Unlock the full analysis to see how each price performed and which price gives you the strongest result.';
-  const detail = !recommendation.enoughData
-    ? `Not enough yet to name a best-performing price — ${recommendation.needed.moreTotal} more responses will do it.`
-    : recommendation.isClearWinner
-      ? 'One of your prices is clearly ahead of the others.'
-      : 'Your prices are running close together, which is exactly when the detail matters.';
+/** Every truthful, dynamic sales signal the locked page can lead with (WYBY-02
+ * §5) — keyed by what `compareRecommendations` returns. Each one only claims
+ * what the current data actually supports; never "changed" unless it did,
+ * never a decisive winner when prices are still close. */
+const CONVERSION_COPY = {
+  leader_changed: {
+    headline: 'Your latest responses changed the leading price.',
+    body: 'Unlock the updated report to see what is leading now and why.',
+  },
+  leader_holding: {
+    headline: 'Your leading price is holding up as more responses come in.',
+    body: 'See how the additional responses changed the gap, purchase intent, modelled revenue, and confidence in the result.',
+  },
+  now_has_leader: {
+    headline: 'Your test now has enough data to compare your prices.',
+    body: 'One tested price is currently clearly ahead.',
+  },
+  now_close: {
+    headline: 'Your latest results are close.',
+    body: 'Unlock the report to see how the prices compare and why we would treat the result as directional rather than decisive.',
+  },
+  still_building: {
+    headline: 'Your test is still building a reliable sample.',
+    body: 'Unlock this test once to keep the live report open as new responses come in.',
+  },
+};
+
+/**
+ * The main revenue-conversion screen (WYBY-02). Sells the CURRENT, updated
+ * report — not "give us $14.90 to get back what we took away" — so every
+ * number here is framed around what changed since the free snapshot, never
+ * around what's being withheld.
+ */
+function Paywall({ test, totalResponses, newResponses, recommendation, freeRecommendation, token }) {
+  const state = compareRecommendations(freeRecommendation, recommendation);
+  const { headline: stateHeadline, body: stateBody } = CONVERSION_COPY[state];
+
+  const benefits = [
+    ...(recommendation.enoughData ? ['Latest best-performing tested price'] : []),
+    'Purchase intent + modelled revenue at every price',
+    'Strong-intent and suggested-price analysis',
+    'Pricing Confidence + CSV export',
+  ];
 
   return (
     <div className="card p-6 bg-locked">
-      <p className="pill bg-white">Locked</p>
+      <p className="pill bg-white">Updated report ready</p>
       <h2 className="mt-3 text-2xl font-extrabold tracking-tight">
-        Unlock your full pricing report — $14.90
+        {newResponses} new {newResponses === 1 ? 'response is' : 'responses are'} waiting
       </h2>
       <p className="mt-2 text-muted leading-relaxed">
-        {supportingCopy}
-      </p>
-      <p className="hint mt-2">
-        You collected {responseCount} responses. {detail} The free tier covers the first {config.freeResponseLimit}{' '}
-        responses — your test is past that and still collecting.
+        Your free report was based on the first {test.free_response_limit} responses. Your test now has{' '}
+        {totalResponses}. Unlock the updated pricing analysis to see what all of your latest data says.
       </p>
 
-      <ul className="mt-4 space-y-1 text-sm">
-        <li>✓ Purchase intent at every price</li>
-        <li>✓ Modelled revenue per price</li>
-        <li>✓ Median suggested price</li>
-        <li>✓ Strong purchase-intent breakdown</li>
-        {recommendation.enoughData && <li>✓ Best-performing tested price</li>}
-        <li>✓ CSV export</li>
+      <div className="mt-4 rounded-xl border-2 border-ink bg-white p-4">
+        <p className="font-bold">{stateHeadline}</p>
+        <p className="hint mt-1">{stateBody}</p>
+      </div>
+
+      <ul className="mt-4 space-y-1.5 text-sm">
+        {benefits.map((item) => (
+          <li key={item} className="flex items-start gap-2">
+            <CheckIcon className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+            <span>{item}</span>
+          </li>
+        ))}
       </ul>
 
-      <UnlockButton token={token} stripeEnabled={config.stripe.enabled} price="$14.90" />
+      <UnlockButton
+        token={token}
+        stripeEnabled={config.stripe.enabled}
+        price="$14.90"
+        totalResponses={totalResponses}
+      />
     </div>
   );
 }
@@ -75,6 +118,11 @@ export default async function ResultsPage({ params }) {
   ]);
   const report = buildReport(variants, responses);
   const locked = isReportLocked(test, responses.length);
+  // Stable and deterministic without persisting anything: getResponses()
+  // already returns rows ORDER BY created_at, and free_response_limit is
+  // fixed on a test at creation time, so "the first N responses" is the same
+  // slice forever — this can never silently drift as more responses arrive.
+  const freeReport = locked ? buildReport(variants, responses.slice(0, test.free_response_limit)) : null;
   // null unless the underlying view-tracking data can support an honest
   // percentage (see computeAnswerRate's own doc comment) — never rendered
   // when null, never gated by `locked`: this is traffic data, not part of
@@ -85,7 +133,6 @@ export default async function ResultsPage({ params }) {
   if (locked) await track('paywall_viewed', { testId: test.id, props: { responses: responses.length } });
 
   const shareUrl = `${config.appUrl}/t/${test.slug}`;
-  const remaining = Math.max(0, test.free_response_limit - responses.length);
 
   return (
     <>
@@ -101,6 +148,14 @@ export default async function ResultsPage({ params }) {
             </div>
             <h1 className="mt-3 text-3xl sm:text-4xl font-extrabold tracking-tight">{test.title}</h1>
             <p className="mt-2 text-muted">Your purchase-intent results, in one place.</p>
+            {/* Only for paid tests — "future responses included" is a benefit of having
+              * actually unlocked the test, not something to imply while still free/locked. */}
+            {test.is_paid && (
+              <p className="hint mt-1">
+                Updated with all {responses.length} {responses.length === 1 ? 'response' : 'responses'} · Future
+                responses included
+              </p>
+            )}
           </div>
 
           {/* All three land here, next to the title, so they're usable the instant
@@ -149,19 +204,6 @@ export default async function ResultsPage({ params }) {
           </div>
         ) : (
           <>
-            {/* The answer, before the meta-stats. A founder who paid $14.90 wants
-              * "what do I charge" first, not three abstract numbers before it —
-              * only shown once we're actually willing to name a winner (same
-              * `enoughData` gate RecommendationCard itself uses below), and only
-              * on the unlocked path: a locked report hasn't been paid for, so it
-              * gets the paywall's teaser copy instead, never this. */}
-            {!locked && report.recommendation.enoughData && (
-              <p className="text-xl sm:text-2xl font-extrabold tracking-tight">
-                Charge {formatPrice(report.recommendation.winner.amount, test.currency, test.billing_type)} —
-                highest modelled revenue in your test.
-              </p>
-            )}
-
             <div className={answerRate !== null ? 'grid gap-3 sm:grid-cols-4' : 'grid gap-3 sm:grid-cols-3'}>
               <StatTile label="Responses" value={responses.length} />
               <StatTile
@@ -183,28 +225,101 @@ export default async function ResultsPage({ params }) {
               )}
             </div>
 
-            {!locked && remaining > 0 && (
-              <p className="hint text-center">
-                The first {test.free_response_limit} responses are free — {remaining} to go before the
-                detailed report locks.
-              </p>
+            {/* Only meaningful pre-payment, at or under the free limit — past it the
+              * Paywall below takes over, and a paid test has no "free" concept left. */}
+            {!test.is_paid && responses.length <= test.free_response_limit && (
+              <FreeProgressBanner responseCount={responses.length} freeLimit={test.free_response_limit} />
             )}
 
             {locked ? (
               <>
                 <Paywall
-                  responseCount={responses.length}
+                  test={test}
+                  totalResponses={responses.length}
+                  newResponses={responses.length - test.free_response_limit}
                   recommendation={report.recommendation}
+                  freeRecommendation={freeReport.recommendation}
                   token={test.creator_token}
                 />
                 {/* Never `report.priceStats` on this branch. A locked report is
                   * withheld server-side — the numbers must not reach the HTML at
-                  * all, blurred or otherwise (see LockedPriceTable). */}
-                <LockedPriceTable variants={variants} test={test} />
+                  * all, blurred or otherwise (see LockedReportPreview). */}
+                <LockedReportPreview
+                  variants={variants}
+                  test={test}
+                  hasRecommendation={report.recommendation.enoughData}
+                />
+
+                {/* The creator's own free analysis, preserved exactly as they saw it —
+                  * this is real, already-shown data (not paid data), so it renders with
+                  * the same unlocked components the paid path uses below. Collapsed by
+                  * default (WYBY-02 §12's "if it distracts from conversion" fallback) —
+                  * plain <details>/<summary> so this needs no client component and still
+                  * works with JS disabled. */}
+                <details className="group [&::-webkit-details-marker]:hidden">
+                  {/* Styled as its own secondary section (bg-paper tint + real heading
+                    * hierarchy), not a bare utility row — but deliberately never bg-locked
+                    * or accent-heavy: this must read as clearly less prominent than the
+                    * "33 new responses are waiting" card above and the repeated CTA below. */}
+                  <summary className="card bg-paper cursor-pointer list-none p-5 flex items-center justify-between gap-3">
+                    <div>
+                      <h2 className="text-lg font-extrabold tracking-tight">
+                        Your free snapshot — first {test.free_response_limit} responses
+                      </h2>
+                      <p className="hint mt-1">
+                        Frozen at {test.free_response_limit} responses ·{' '}
+                        {responses.length - test.free_response_limit}{' '}
+                        {responses.length - test.free_response_limit === 1
+                          ? 'newer response is'
+                          : 'newer responses are'}{' '}
+                        not included
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1.5 text-sm font-bold text-accent">
+                      <span className="group-open:hidden">View free snapshot</span>
+                      <span className="hidden group-open:inline">Hide snapshot</span>
+                      <ChevronDown className="h-4 w-4 transition-transform duration-200 group-open:rotate-180" />
+                    </div>
+                  </summary>
+                  {/* No intro box/badge here on purpose — the accordion header above
+                    * already says what this is; the content just starts with the report. */}
+                  <div className="mt-3 space-y-3">
+                    <RecommendationCard
+                      recommendation={freeReport.recommendation}
+                      test={test}
+                      pricingConfidence={freeReport.pricingConfidence}
+                    />
+                    <PriceTable
+                      priceStats={freeReport.priceStats}
+                      test={test}
+                      winnerId={freeReport.recommendation.enoughData ? freeReport.recommendation.winner?.id : null}
+                    />
+                    {test.ask_confidence && <ConfidenceBlock confidence={freeReport.confidence} />}
+                    {test.ask_suggested_price && (
+                      <SuggestedPriceBlock suggested={freeReport.suggested} test={test} />
+                    )}
+                    <PricingConfidenceBlock pricingConfidence={freeReport.pricingConfidence} />
+                  </div>
+                </details>
+
+                <div className="card p-6 text-center">
+                  <UnlockButton
+                    token={test.creator_token}
+                    stripeEnabled={config.stripe.enabled}
+                    price="$14.90"
+                    totalResponses={responses.length}
+                  />
+                </div>
               </>
             ) : (
               <>
-                <RecommendationCard recommendation={report.recommendation} test={test} />
+                {test.is_paid && <UnlockToast />}
+                <RecommendationCard
+                  recommendation={report.recommendation}
+                  test={test}
+                  isPaid={test.is_paid}
+                  pricingConfidence={report.pricingConfidence}
+                />
                 <PriceTable
                   priceStats={report.priceStats}
                   test={test}

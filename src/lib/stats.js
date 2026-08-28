@@ -202,6 +202,21 @@ export function computeAnswerRate(viewCount, answeredCount) {
   return (answeredCount / viewCount) * 100;
 }
 
+/**
+ * Which truthful, dynamic sales signal the locked page should lead with
+ * (WYBY-02 §5). Compares the recommendation computed from only the free
+ * snapshot against the one computed from every response collected so far.
+ * Every branch here must only ever claim something the current data actually
+ * supports — never "your leading price changed" unless it demonstrably did.
+ */
+export function compareRecommendations(freeRecommendation, currentRecommendation) {
+  if (!currentRecommendation.enoughData) return 'still_building';
+  if (!currentRecommendation.isClearWinner) return 'now_close';
+  if (!freeRecommendation.enoughData) return 'now_has_leader';
+  if (freeRecommendation.winner?.id !== currentRecommendation.winner?.id) return 'leader_changed';
+  return 'leader_holding';
+}
+
 export function buildReport(variants, responses) {
   const priceStats = summarisePriceVariants(variants, responses);
   const confidence = summariseConfidence(responses);

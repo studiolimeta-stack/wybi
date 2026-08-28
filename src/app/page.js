@@ -97,8 +97,8 @@ export default function HomePage() {
                   View demo
                 </Link>
               </div>
-              <span className="hint mt-2 block">Free to create and collect responses.</span>
-              <span className="hint mt-1 block">Pay $14.90 only when you unlock the full report.</span>
+              <span className="hint mt-2 block">Create for free. Collect as many responses as you want.</span>
+              <span className="hint mt-1 block">See the first {config.freeResponseLimit} free. Unlock the full report for $14.90.</span>
             </div>
 
             <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-semibold text-muted sm:flex-nowrap sm:gap-x-5 sm:text-sm">
@@ -164,8 +164,8 @@ export default function HomePage() {
         <section id="demo" className="scroll-mt-24 py-12 sm:py-14">
           <div className="mx-auto max-w-2xl text-center">
             <p className="section-label">See it in action</p>
-            <h2 className="mt-2 text-3xl font-extrabold tracking-tight">How would the actual pricing question look?</h2>
-            <p className="mt-2 text-muted">See exactly what one respondent sees.</p>
+            <h2 className="mt-2 text-3xl font-extrabold tracking-tight">See exactly what your respondents will see.</h2>
+            <p className="mt-2 text-muted">Experience the pricing question just like a real respondent would.</p>
           </div>
           {/* No max-width here on purpose — HomeDemo sizes its own box per format
             * (wider for the side-by-side image layout), the heading above stays

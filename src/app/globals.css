@@ -227,6 +227,16 @@ h1, h2, h3, .font-extrabold, .font-bold {
   .btn-primary { background: var(--color-accent); color: #fff; }
   .btn-plain   { background: #fffdf9; color: var(--color-ink); }
 
+  /* Some primary-button labels are built from dynamic parts (a price, an
+   * optional " (dev mode)" suffix) and can't be guaranteed to fit on one
+   * line at narrow widths. .btn defaults to nowrap, which silently overflows
+   * the pill (and the page) instead of wrapping. Opt in per-button rather
+   * than flipping the shared default, which every other .btn relies on. */
+  .btn-wrap {
+    white-space: normal;
+    line-height: 1.25;
+  }
+
   /*
    * The yes/no answer buttons, and the reason they look identical.
    *

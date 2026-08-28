@@ -170,16 +170,18 @@ export function pricingConfidence(priceStats, confidence, suggested) {
     agreementScore = Math.max(0, 1 - nearest / (spread || 1)) * 20;
   }
 
-  const score = Math.round(sampleScore + balanceScore + intentScore + agreementScore);
-  return {
-    score: Math.max(0, Math.min(100, score)),
-    parts: {
-      sample: Math.round(sampleScore),
-      balance: Math.round(balanceScore),
-      intent: Math.round(intentScore),
-      agreement: Math.round(agreementScore),
-    },
+  // Round each part first, then derive the header from those rounded parts —
+  // never from the raw sum. Rounding the sum independently of the parts is
+  // exactly how a header can disagree with the breakdown sitting right below
+  // it (e.g. a raw 79.4 rounds to 79 while its four rounded parts sum to 80).
+  const parts = {
+    sample: Math.round(sampleScore),
+    balance: Math.round(balanceScore),
+    intent: Math.round(intentScore),
+    agreement: Math.round(agreementScore),
   };
+  const score = Math.max(0, Math.min(100, parts.sample + parts.balance + parts.intent + parts.agreement));
+  return { score, parts };
 }
 
 export function buildReport(variants, responses) {

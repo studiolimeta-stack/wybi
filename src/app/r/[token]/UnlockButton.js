@@ -32,8 +32,13 @@ export function UnlockButton({ token, stripeEnabled, price }) {
 
   return (
     <div>
-      <button type="button" className="btn btn-primary mt-5 w-full sm:w-auto" onClick={unlock} disabled={busy}>
-        {busy ? 'Unlocking…' : `Unlock your full pricing report — ${price}${stripeEnabled ? '' : ' (dev mode)'}`}
+      <button
+        type="button"
+        className="btn btn-primary btn-wrap mt-5 w-full sm:w-auto"
+        onClick={unlock}
+        disabled={busy}
+      >
+        {busy ? 'Unlocking…' : `Unlock full report — ${price}${stripeEnabled ? '' : ' (dev mode)'}`}
       </button>
       <p className="hint mt-2">
         {stripeEnabled

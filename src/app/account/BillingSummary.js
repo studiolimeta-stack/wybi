@@ -54,8 +54,8 @@ export function BillingSummary({ tests, payments }) {
               <p className="hint">
                 <strong className="text-ink">{nextToUnlock.title}</strong> has passed the free limit too.
               </p>
-              <Link href={`/r/${nextToUnlock.creator_token}`} className="btn btn-plain mt-2 w-full text-sm">
-                Unlock your full pricing report — $14.90
+              <Link href={`/r/${nextToUnlock.creator_token}`} className="btn btn-plain btn-wrap mt-2 w-full text-sm">
+                Unlock full report — $14.90
               </Link>
             </div>
           )}
@@ -72,8 +72,8 @@ export function BillingSummary({ tests, payments }) {
             <li>✓ Strong purchase-intent breakdown</li>
             <li>✓ CSV export</li>
           </ul>
-          <Link href={`/r/${nextToUnlock.creator_token}`} className="btn btn-primary mt-4 w-full">
-            Unlock your full pricing report — $14.90
+          <Link href={`/r/${nextToUnlock.creator_token}`} className="btn btn-primary btn-wrap mt-4 w-full">
+            Unlock full report — $14.90
           </Link>
           <p className="hint mt-2">Unlocks are per test, not a subscription — you only pay for reports you open.</p>
         </>

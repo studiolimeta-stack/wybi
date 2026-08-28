@@ -13,6 +13,7 @@ import {
   summariseConfidence,
   recommendPrice,
   median,
+  pricingConfidence,
 } from '../src/lib/stats.js';
 
 const variants = [
@@ -144,4 +145,27 @@ test('confidence rates are shares of everyone asked, not of the yeses', () => {
   assert.equal(summary.yesRate, 20);
   assert.equal(summary.wouldPay, 20);
   assert.equal(summary.strongRate, 20);
+});
+
+test('pricing confidence header always equals the sum of its own rounded parts', () => {
+  // Regression fixture: the raw (unrounded) total is 23.145..., which rounds
+  // to a header of 23 — but the four parts shown underneath it round to
+  // 9 + 5 + 0 + 10 = 24. That one-point gap between the headline number and
+  // its own visible breakdown is exactly what testers reproduced live.
+  const priceStats = [
+    { amount: 19, responses: 10 },
+    { amount: 29, responses: 33 },
+  ];
+  const confidence = { strongRate: 0 };
+  const suggested = { count: 0, median: 0 };
+
+  const result = pricingConfidence(priceStats, confidence, suggested);
+  const partsSum = result.parts.sample + result.parts.balance + result.parts.intent + result.parts.agreement;
+
+  assert.equal(result.parts.sample, 9);
+  assert.equal(result.parts.balance, 5);
+  assert.equal(result.parts.intent, 0);
+  assert.equal(result.parts.agreement, 10);
+  assert.equal(result.score, partsSum, 'header must never disagree with its own breakdown');
+  assert.equal(result.score, 24);
 });

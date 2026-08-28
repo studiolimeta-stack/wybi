@@ -14,6 +14,7 @@ import {
   recommendPrice,
   median,
   pricingConfidence,
+  computeAnswerRate,
 } from '../src/lib/stats.js';
 
 const variants = [
@@ -168,4 +169,20 @@ test('pricing confidence header always equals the sum of its own rounded parts',
   assert.equal(result.parts.agreement, 10);
   assert.equal(result.score, partsSum, 'header must never disagree with its own breakdown');
   assert.equal(result.score, 24);
+});
+
+test('answer rate: normal case computes a plain percentage', () => {
+  assert.equal(computeAnswerRate(12, 11), (11 / 12) * 100);
+  assert.ok(Math.abs(computeAnswerRate(12, 11) - 91.6666) < 0.001);
+});
+
+test('answer rate: zero views means no tracking data — refuse, not divide-by-zero', () => {
+  assert.equal(computeAnswerRate(0, 63), null);
+});
+
+test('answer rate: answered above viewed is impossible for real traffic — refuse', () => {
+  // Regression fixture: InvoiceAI Pro demo (token 0k-KaFvlbM5gTawDjEHsZ7mF0fpmzHUY) has
+  // 189 seeded responses against 37 real view events — a naive answered/viewed computes
+  // to 511%. This is live data in the database, not a hypothetical.
+  assert.equal(computeAnswerRate(37, 189), null);
 });

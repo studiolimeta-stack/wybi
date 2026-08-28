@@ -184,6 +184,24 @@ export function pricingConfidence(priceStats, confidence, suggested) {
   return { score, parts };
 }
 
+/**
+ * View → answer funnel rate for the "Answer rate" stat tile on /r/[token].
+ *
+ * Refuses rather than misleads: a 0 denominator (no view-tracking data —
+ * typically legacy/seeded responses inserted directly into `responses`
+ * without ever going through the real view flow) or `answeredCount` above
+ * `viewCount` (same cause — real traffic can never answer without first
+ * being counted as a view, since both share the visitor_id cookie) both
+ * mean the underlying data can't support an honest percentage. Return null
+ * and let the caller skip rendering entirely, same philosophy
+ * `recommendPrice()` already uses: refuse a number rather than show a wrong
+ * one.
+ */
+export function computeAnswerRate(viewCount, answeredCount) {
+  if (!viewCount || answeredCount > viewCount) return null;
+  return (answeredCount / viewCount) * 100;
+}
+
 export function buildReport(variants, responses) {
   const priceStats = summarisePriceVariants(variants, responses);
   const confidence = summariseConfidence(responses);

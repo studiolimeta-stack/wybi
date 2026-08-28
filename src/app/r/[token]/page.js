@@ -13,8 +13,8 @@ import {
 import { ManageTestMenu } from './ManageTestMenu.js';
 import { ShareTestButton } from './ShareTestButton.js';
 import { getTestByCreatorToken, getPriceVariants, getResponses, isReportLocked } from '../../../lib/tests.js';
-import { buildReport } from '../../../lib/stats.js';
-import { track } from '../../../lib/events.js';
+import { buildReport, computeAnswerRate } from '../../../lib/stats.js';
+import { track, getTestViewCount } from '../../../lib/events.js';
 import { config, formatPrice } from '../../../lib/config.js';
 import { UnlockButton } from './UnlockButton.js';
 
@@ -68,9 +68,18 @@ export default async function ResultsPage({ params }) {
   const test = await getTestByCreatorToken(token);
   if (!test) notFound();
 
-  const [variants, responses] = await Promise.all([getPriceVariants(test.id), getResponses(test.id)]);
+  const [variants, responses, viewCount] = await Promise.all([
+    getPriceVariants(test.id),
+    getResponses(test.id),
+    getTestViewCount(test.id),
+  ]);
   const report = buildReport(variants, responses);
   const locked = isReportLocked(test, responses.length);
+  // null unless the underlying view-tracking data can support an honest
+  // percentage (see computeAnswerRate's own doc comment) — never rendered
+  // when null, never gated by `locked`: this is traffic data, not part of
+  // the paid pricing analysis.
+  const answerRate = computeAnswerRate(viewCount, responses.length);
 
   await track('results_viewed', { testId: test.id });
   if (locked) await track('paywall_viewed', { testId: test.id, props: { responses: responses.length } });
@@ -153,7 +162,7 @@ export default async function ResultsPage({ params }) {
               </p>
             )}
 
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className={answerRate !== null ? 'grid gap-3 sm:grid-cols-4' : 'grid gap-3 sm:grid-cols-3'}>
               <StatTile label="Responses" value={responses.length} />
               <StatTile
                 label="Overall purchase intent"
@@ -165,6 +174,13 @@ export default async function ResultsPage({ params }) {
                 value={pct(report.confidence.strongRate)}
                 sub="The honest number"
               />
+              {answerRate !== null && (
+                <StatTile
+                  label="Answer rate"
+                  value={pct(answerRate)}
+                  sub={`${responses.length} of ${viewCount} visitors`}
+                />
+              )}
             </div>
 
             {!locked && remaining > 0 && (

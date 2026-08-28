@@ -34,6 +34,31 @@ export const EVENT_NAMES = new Set([
   'test_claimed',
 ]);
 
+/**
+ * Distinct visitors who loaded the respondent page for this test — the
+ * denominator for the /r/[token] "Answer rate" stat (see computeAnswerRate
+ * in lib/stats.js, which decides whether this number is honest enough to
+ * show at all).
+ *
+ * Distinct on visitor_id because the same visitor reloading `/t/[slug]`
+ * fires a fresh `respondent_view` event every time.
+ *
+ * KNOWN, ACCEPTED limitation: the creator's own "View respondent page"
+ * clicks fire this same event — there's no session-based way to tell
+ * creator-preview traffic from real respondent traffic without new
+ * instrumentation (out of scope here). That inflates this count slightly,
+ * which only ever biases the resulting rate LOW (extra views, no matching
+ * answer) — the safe direction to be wrong in, not a reason to withhold it.
+ */
+export async function getTestViewCount(testId) {
+  const { rows } = await query(
+    `SELECT COUNT(DISTINCT visitor_id)::int AS n
+     FROM events WHERE test_id = $1 AND name = 'respondent_view' AND visitor_id IS NOT NULL`,
+    [testId],
+  );
+  return rows[0].n;
+}
+
 /** Never allowed to break a user flow — analytics failures are swallowed and logged. */
 export async function track(name, { testId = null, visitorId = null, props = null } = {}) {
   if (!EVENT_NAMES.has(name)) return;

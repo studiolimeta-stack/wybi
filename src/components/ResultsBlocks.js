@@ -32,9 +32,12 @@ function PriceTableFrame({ caption, children }) {
         <table className="w-full min-w-[30rem] text-sm">
           {caption && <caption className="sr-only">{caption}</caption>}
           <thead>
-            <tr className="border-b-2 border-ink bg-locked text-left">
+            <tr className="border-b-2 border-ink bg-paper text-left">
               {PRICE_COLUMNS.map((label, index) => (
-                <th key={label} className={`p-3 font-bold${index === 0 ? '' : ' text-right'}`}>
+                <th
+                  key={label}
+                  className={`p-3 text-xs font-bold uppercase tracking-wider text-muted${index === 0 ? '' : ' text-right'}`}
+                >
                   {label}
                 </th>
               ))}
@@ -43,7 +46,7 @@ function PriceTableFrame({ caption, children }) {
           <tbody>{children}</tbody>
         </table>
       </div>
-      <p className="hint p-3 border-t-2 border-ink bg-locked">
+      <p className="hint p-3 border-t-2 border-ink bg-paper">
         <strong>Modelled revenue</strong> estimates the relative revenue potential of each tested price based on
         respondents&apos; answers. It compares prices, not actual revenue.
       </p>
@@ -70,7 +73,9 @@ export function PriceTable({ priceStats, test, winnerId }) {
           <td className="p-3 text-right tabular-nums">{row.yes}</td>
           <td className="p-3 text-right">
             <div className="flex items-center justify-end gap-2">
-              <span className="h-2 rounded-full bg-yes" style={{ width: `${(row.yesRate / maxRate) * 56}px` }} />
+              <div className="w-14">
+                <ConfidenceMeter value={row.yesRate} max={maxRate} color="var(--color-accent)" />
+              </div>
               <span className="tabular-nums w-12 text-right">{pct(row.yesRate)}</span>
             </div>
           </td>
@@ -144,7 +149,7 @@ export function RecommendationCard({ recommendation, test }) {
 
   return (
     <div className="card p-6">
-      <p className="pill bg-locked">Best-performing tested price</p>
+      <p className="pill bg-accent text-white border-accent">Best-performing tested price</p>
       <p className="mt-3 text-5xl font-extrabold tracking-tight">
         {formatPrice(winner.amount, test.currency, test.billing_type)}
       </p>
@@ -185,17 +190,14 @@ export function ConfidenceBlock({ confidence }) {
                 {row.value} ({pct(row.rate)})
               </span>
             </div>
-            <div className="mt-1 h-2 rounded-full bg-locked">
-              <div
-                className="h-2 rounded-full bg-ink"
-                style={{ width: `${Math.min(100, row.rate)}%` }}
-              />
+            <div className="mt-1.5">
+              <ConfidenceMeter value={row.rate} max={100} color="var(--color-accent)" />
             </div>
           </div>
         ))}
       </div>
 
-      <div className="mt-5 rounded-xl border-2 border-ink bg-locked p-4">
+      <div className="mt-5 rounded-xl border-2 border-ink p-4">
         <p className="text-xs font-bold uppercase tracking-wider text-muted">Strong purchase intent</p>
         <p className="text-3xl font-extrabold tracking-tight">{pct(confidence.strongRate)}</p>
         <p className="hint mt-1">Share of everyone asked who said yes and selected &ldquo;I&apos;d actually pay.&rdquo;</p>
@@ -216,6 +218,16 @@ export function SuggestedPriceBlock({ suggested, test }) {
 
   const fmt = (value) => formatPrice(Math.round(value * 100) / 100, test.currency, 'one_time');
 
+  // Lowest/average/highest used to be three bare text columns — no visual
+  // separation from the median or from each other, and easy to skim past.
+  // Boxing them (same motif as the median card, one weight down) makes each
+  // number read as its own fact instead of a caption.
+  const rangeStats = [
+    { label: 'Lowest', value: suggested.min },
+    { label: 'Average', value: suggested.average },
+    { label: 'Highest', value: suggested.max },
+  ];
+
   return (
     <div className="card p-6">
       <h2 className="text-lg font-extrabold tracking-tight">What the no-sayers would pay</h2>
@@ -223,28 +235,23 @@ export function SuggestedPriceBlock({ suggested, test }) {
         From {suggested.count} {suggested.count === 1 ? 'person' : 'people'} who said no and named a price.
       </p>
 
-      <p className="mt-4 text-xs font-bold uppercase tracking-wider text-muted">Median suggested price</p>
-      <p className="text-4xl font-extrabold tracking-tight">{fmt(suggested.median)}</p>
+      <div className="mt-4 rounded-xl border-2 border-ink p-4">
+        <p className="text-xs font-bold uppercase tracking-wider text-muted">Median suggested price</p>
+        <p className="mt-1 text-5xl font-extrabold tracking-tight">{fmt(suggested.median)}</p>
+        {suggested.count >= 4 && (
+          <p className="hint mt-1">
+            Half of the suggestions fall between {fmt(suggested.p25)} and {fmt(suggested.p75)}.
+          </p>
+        )}
+      </div>
 
-      {suggested.count >= 4 && (
-        <p className="mt-2 text-sm text-muted">
-          Half of the suggestions fall between {fmt(suggested.p25)} and {fmt(suggested.p75)}.
-        </p>
-      )}
-
-      <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
-        <div>
-          <p className="hint">Lowest</p>
-          <p className="font-bold">{fmt(suggested.min)}</p>
-        </div>
-        <div>
-          <p className="hint">Average</p>
-          <p className="font-bold">{fmt(suggested.average)}</p>
-        </div>
-        <div>
-          <p className="hint">Highest</p>
-          <p className="font-bold">{fmt(suggested.max)}</p>
-        </div>
+      <div className="mt-4 grid grid-cols-3 gap-3">
+        {rangeStats.map((stat) => (
+          <div key={stat.label} className="rounded-xl border border-line bg-paper p-3 text-center">
+            <p className="hint">{stat.label}</p>
+            <p className="mt-1 text-xl font-extrabold tracking-tight sm:text-2xl">{fmt(stat.value)}</p>
+          </div>
+        ))}
       </div>
     </div>
   );

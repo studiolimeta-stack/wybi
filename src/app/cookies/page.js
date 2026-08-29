@@ -4,7 +4,7 @@ import { LegalPage } from '../../components/LegalPage.js';
 
 export const metadata = { title: 'Cookie Policy — Would You Buy It?' };
 
-const UPDATED = 'August 26, 2026';
+const UPDATED = 'August 29, 2026';
 
 const COOKIES = [
   {
@@ -51,9 +51,15 @@ export default function CookiesPage() {
 
         <h2>What&apos;s not here</h2>
         <p>
-          No third-party analytics scripts, no advertising pixels, no social-media trackers. Basic product
-          analytics (page views, which step of a flow people reach) is recorded first-party, server-side, into our
-          own database — it doesn&apos;t use a cookie of its own beyond <strong>wybi_vid</strong> above.
+          No advertising pixels, no social-media trackers, no marketing cookies. Two scripts do run in your browser
+          for reasons other than tracking you across the web, and neither sets a cookie or any persistent
+          identifier: <strong>Cloudflare Turnstile</strong>, an invisible bot-check on the voting page (so a
+          test&apos;s results reflect real people, not scripts), and <strong>Umami</strong>, an open-source
+          analytics tool we self-host on our own server for basic traffic stats (page views, referrers, browser
+          mix). Detailed step-by-step funnel data (which step of a flow people reach) is recorded separately,
+          first-party, server-side, into our own database — it doesn&apos;t use a cookie of its own beyond{' '}
+          <strong>wybi_vid</strong> above. See the <Link href="/privacy">Privacy Policy</Link> for the full detail
+          on both.
         </p>
 
         <h2>Managing cookies</h2>

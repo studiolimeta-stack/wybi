@@ -4,7 +4,7 @@ import { LegalPage } from '../../components/LegalPage.js';
 
 export const metadata = { title: 'Privacy Policy — Would You Buy It?' };
 
-const UPDATED = 'August 27, 2026';
+const UPDATED = 'August 29, 2026';
 
 export default function PrivacyPage() {
   return (
@@ -21,7 +21,7 @@ export default function PrivacyPage() {
         <ul>
           <li>Answering a price test doesn&apos;t require a name, email, or account.</li>
           <li>A test creator never sees who answered what — only aggregated numbers per price.</li>
-          <li>We don&apos;t sell data, run ads, or use third-party analytics or ad trackers.</li>
+          <li>We don&apos;t sell data, run ads, or use advertising or marketing trackers of any kind.</li>
           <li>There is no AI anywhere in this product, and none of your data is used to train one.</li>
         </ul>
 
@@ -37,6 +37,14 @@ export default function PrivacyPage() {
           The test creator&apos;s report is aggregated statistics — purchase-intent rates, modelled revenue, that
           kind of thing — not a list of individual answers. Even the CSV export a creator can download deliberately
           leaves out any per-respondent identifier.
+        </p>
+        <p>
+          We also record a few technical signals to keep results trustworthy and catch abuse: a coarse device
+          category (mobile, tablet, or desktop — not your exact browser or device), and, if present, where the link
+          was shared from (a referring page or campaign tag). We never store your IP address itself — only a
+          one-way, salted hash of it (see &ldquo;Keeping results honest&rdquo; below). None of this is shown to the
+          test creator; it&apos;s visible only in our own internal dashboard, used to run the product, never sold or
+          shared.
         </p>
 
         <h2>If you&apos;re creating an account or a test</h2>
@@ -76,11 +84,38 @@ export default function PrivacyPage() {
             <strong>Our transactional email provider</strong> — to send sign-in links, if you sign in by email
             instead of Google.
           </li>
+          <li>
+            <strong>Cloudflare (Turnstile)</strong> — an invisible bot-check on the voting page, so a test&apos;s
+            results reflect real people rather than automated scripts. Cloudflare&apos;s widget runs in your
+            browser, and when you vote we send it a one-time verification token together with your IP address to
+            confirm you&apos;re not a bot — see{' '}
+            <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener noreferrer">
+              Cloudflare&apos;s privacy policy
+            </a>
+            . It never shows a checkbox or interrupts you if it can verify you silently.
+          </li>
         </ul>
         <p>
-          We do not sell personal data to anyone, and we do not use third-party advertising or analytics trackers.
-          Basic product analytics (which pages get used, which steps people drop off at) is first-party, stored in
-          our own database, and used only to improve the product.
+          We do not sell personal data to anyone, and we do not use third-party advertising or marketing trackers.
+          Product usage analytics happens two ways: detailed funnel events (which step of the flow people reach,
+          results-page views, that kind of thing) are stored first-party in our own database; and general site
+          traffic (page views, referrers, browser/device mix) is measured with{' '}
+          <a href="https://umami.is" target="_blank" rel="noopener noreferrer">
+            Umami
+          </a>
+          , an open-source analytics tool we run ourselves on our own server — it&apos;s cookieless, uses no
+          persistent identifier, and never sends your data to an outside analytics company.
+        </p>
+
+        <h2>Keeping results honest</h2>
+        <p>
+          To stop the same person voting twice on a test or abusing sign-in/upload endpoints, we compute a
+          one-way, salted hash (SHA-256) of your IP address and use that hash for rate-limiting and duplicate-vote
+          checks. Your actual IP address is never written to our database — only this hash, which can&apos;t be
+          reversed back into an address, and which we never show to test creators. Logged-in sessions store the
+          same hash, alongside your browser&apos;s user-agent string, purely for account security (recognising
+          anomalous activity) and to support &ldquo;Log out everywhere&rdquo; from{' '}
+          <Link href="/account">Account</Link>.
         </p>
 
         <h2>How long we keep it</h2>

@@ -6,6 +6,7 @@ import { getUserForAdmin, listTestsForUserAdmin } from '../../../../lib/admin.js
 import { checkAdminAccess } from '../../../../lib/adminAuth.js';
 import { currentUser } from '../../../../lib/session.js';
 import { BanUserButton } from './BanUserButton.js';
+import { DeleteTestButton } from '../../../../components/DeleteTestButton.js';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Admin — user', robots: { index: false, follow: false } };
@@ -17,9 +18,11 @@ export const metadata = { title: 'Admin — user', robots: { index: false, follo
  * uses, which needs only the token, not their session. That's the real
  * "what they see," with no new auth surface to get wrong.
  *
- * The one exception to "admin is read-only" (see /admin/tests) is the ban
- * control below — banning has no existing creator-facing surface to reuse
- * the way test moderation does, so it gets a real admin-only mutation.
+ * Two mutations happen directly from this page: delete (DeleteTestButton,
+ * shared with /admin/tests — reuses the creator's own DELETE route, see that
+ * component's docstring) and ban (BanUserButton — the one action with no
+ * existing creator-facing surface to reuse, so it gets a real admin-only
+ * mutation route instead).
  */
 export default async function AdminUserPage({ params, searchParams }) {
   const { id } = await params;
@@ -90,6 +93,7 @@ export default async function AdminUserPage({ params, searchParams }) {
                   <th className="py-2 text-right">Prices</th>
                   <th className="py-2">Created</th>
                   <th className="py-2">Links</th>
+                  <th className="py-2">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -114,6 +118,9 @@ export default async function AdminUserPage({ params, searchParams }) {
                         page
                       </a>
                     </td>
+                    <td className="py-2">
+                      <DeleteTestButton token={t.creator_token} />
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -123,8 +130,7 @@ export default async function AdminUserPage({ params, searchParams }) {
 
         <p className="hint">
           &quot;results (as them)&quot; opens the exact page this creator sees — same URL they'd bookmark, no
-          impersonation needed. Test moderation (pause/delete) happens from that page, not here. Banning is the
-          one action available directly on this screen.
+          impersonation needed. Delete a test directly above, or open its results link to pause or export it.
         </p>
       </main>
       <SiteFooter />

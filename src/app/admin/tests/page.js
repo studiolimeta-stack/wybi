@@ -4,6 +4,7 @@ import { AdminPagination } from '../../../components/AdminPagination.js';
 import { listRecentTestsForAdmin, countTestsForAdmin } from '../../../lib/admin.js';
 import { checkAdminAccess, adminHref } from '../../../lib/adminAuth.js';
 import { currentUser } from '../../../lib/session.js';
+import { DeleteTestButton } from '../../../components/DeleteTestButton.js';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Admin — tests', robots: { index: false, follow: false } };
@@ -46,12 +47,13 @@ export default async function AdminTestsPage({ searchParams }) {
                 <th className="py-2">Status</th>
                 <th className="py-2">Flags</th>
                 <th className="py-2">Links</th>
+                <th className="py-2">Actions</th>
               </tr>
             </thead>
             <tbody>
               {tests.length === 0 && (
                 <tr>
-                  <td className="py-3 text-muted" colSpan={5}>
+                  <td className="py-3 text-muted" colSpan={6}>
                     No tests yet.
                   </td>
                 </tr>
@@ -62,9 +64,11 @@ export default async function AdminTestsPage({ searchParams }) {
                   <td className="py-2 text-right tabular-nums">{test.response_count}</td>
                   <td className="py-2">{test.status}</td>
                   <td className="py-2">{test.reported_count > 0 ? `⚠️ ${test.reported_count}` : ''}</td>
-                  {/* "results" is the moderation link, not a nicety: pause and
-                    * delete live on /r/<token> (ManageTestMenu), so without it
-                    * there'd be no way to act on a test from here at all. */}
+                  {/* "results" still opens /r/<token>'s full Manage-this-test
+                    * menu (pause/resume, export, delete) — kept for anything
+                    * beyond delete. Delete also lives right here now so the
+                    * single most common moderation action doesn't need the
+                    * extra click through. */}
                   <td className="py-2 space-x-2">
                     <a className="underline" href={`/r/${test.creator_token}`}>
                       results
@@ -72,6 +76,9 @@ export default async function AdminTestsPage({ searchParams }) {
                     <a className="underline" href={`/t/${test.slug}`}>
                       page
                     </a>
+                  </td>
+                  <td className="py-2">
+                    <DeleteTestButton token={test.creator_token} />
                   </td>
                 </tr>
               ))}
@@ -81,7 +88,7 @@ export default async function AdminTestsPage({ searchParams }) {
         </div>
 
         <p className="hint">
-          Admin is read-only by design. Pause or delete an abusive test from its results link above.
+          Delete an abusive test directly above, or open its results link to pause, export, or delete it there.
           <a className="ml-2 underline" href={pageHref(page)}>
             refresh
           </a>

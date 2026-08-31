@@ -7,6 +7,7 @@ import { getTrafficSummary, getActiveVisitors } from '../../lib/umamiAdmin.js';
 import { currentUser } from '../../lib/session.js';
 import { checkAdminAccess, adminHref } from '../../lib/adminAuth.js';
 import OnlineNow from '../../components/OnlineNow.js';
+import { DeleteTestButton } from '../../components/DeleteTestButton.js';
 
 export const dynamic = 'force-dynamic';
 
@@ -241,6 +242,9 @@ export default async function AdminOverviewPage({ searchParams }) {
                   <a className="ml-2 underline" href={`/t/${report.slug}`}>
                     page
                   </a>
+                  <span className="ml-2">
+                    <DeleteTestButton token={report.creator_token} />
+                  </span>
                 </li>
               ))}
             </ul>
@@ -248,7 +252,7 @@ export default async function AdminOverviewPage({ searchParams }) {
         )}
 
         <p className="hint">
-          Admin is read-only by design. Pause or delete an abusive test from its results link above.
+          Delete a reported test directly above, or open its results link to pause, export, or delete it there.
           <a className="ml-2 underline" href={adminHref('/admin', { viaToken, key })}>
             refresh
           </a>

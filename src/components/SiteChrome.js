@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
+import { ShieldCheck } from 'lucide-react';
 import wybiMark from '../../public/brand/wybi-mark.png';
 import { currentUser } from '../lib/session.js';
 import { isAdminEmail } from '../lib/admin.js';
@@ -125,9 +126,18 @@ export async function SiteFooter({ variant = 'full' }) {
 
         <div className="mt-10 flex flex-col gap-3 border-t border-white/10 pt-6 text-xs text-white/45 sm:flex-row sm:items-center sm:justify-between">
           <p>© {year} Would You Buy It. All rights reserved.</p>
-          <a href="mailto:studiolimeta@gmail.com" className="hover:text-white">
-            studiolimeta@gmail.com
-          </a>
+          <div className="flex flex-wrap items-center gap-4">
+            {/* Merchant of record, not just a payment processor — see terms#payments.
+                Naming it here (not a card-logo image we'd have to keep licensed/updated)
+                is the trust signal: Paddle handles the charge, tax and invoice. */}
+            <span className="inline-flex items-center gap-1.5">
+              <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
+              Secure checkout by Paddle
+            </span>
+            <a href="mailto:studiolimeta@gmail.com" className="hover:text-white">
+              Contact support
+            </a>
+          </div>
         </div>
       </div>
     </footer>

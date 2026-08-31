@@ -123,6 +123,122 @@ export function summariseSuggestedPrices(responses) {
   };
 }
 
+/**
+ * The boundary between "they'd buy this, just cheaper" and "they don't want
+ * this at any price you'd charge", as a fraction of the price they were
+ * actually shown.
+ *
+ * 0.7 is a judgement call, not a derived constant — so the UI shows the raw
+ * counts and the median gap alongside the split, and the creator can disagree
+ * with the cut and still read their own numbers. Same principle as
+ * pricingConfidence(): show the boring inputs, never just the verdict.
+ */
+const WINNABLE_RATIO = 0.7;
+
+/**
+ * Splits the NO responses into price objections and value objections.
+ *
+ * A no-sayer who was shown $29 and suggested $25 is telling you something
+ * completely different from one who suggested $4, but `summariseSuggestedPrices`
+ * pools them into a single median and loses that distinction. This compares
+ * every suggestion against the price THAT respondent actually saw — which is
+ * the only fair comparison, since each respondent sees exactly one price.
+ *
+ * Returns `{ enoughData: false }` rather than a split when too few no-sayers
+ * named a price; a 1-vs-1 split rendered as two percentages would look like a
+ * finding and is pure noise.
+ */
+export function analyseObjections(variants, responses) {
+  const amountById = new Map(variants.map((v) => [v.id, Number(v.amount)]));
+  const nos = responses.filter((r) => r.answer === 'no');
+
+  const priced = [];
+  for (const r of nos) {
+    const asked = amountById.get(r.price_variant_id);
+    const suggested = Number(r.suggested_price);
+    // A free variant would make the ratio meaningless (divide by zero), and a
+    // suggestion above the asking price isn't an objection at all — clamp the
+    // ratio's usefulness rather than letting either distort the split.
+    if (!Number.isFinite(asked) || asked <= 0) continue;
+    if (r.suggested_price === null || r.suggested_price === undefined) continue;
+    if (!Number.isFinite(suggested) || suggested < 0) continue;
+    priced.push({ asked, suggested, ratio: suggested / asked, gap: asked - suggested });
+  }
+
+  const totalNos = nos.length;
+  const silent = totalNos - priced.length;
+
+  if (priced.length < 4) {
+    return { enoughData: false, totalNos, silent, answered: priced.length };
+  }
+
+  const winnable = priced.filter((p) => p.ratio >= WINNABLE_RATIO);
+  const valueGap = priced.filter((p) => p.ratio < WINNABLE_RATIO);
+
+  const winnableGaps = winnable.map((p) => p.gap).sort((a, b) => a - b);
+  const winnablePrices = winnable.map((p) => p.suggested).sort((a, b) => a - b);
+
+  return {
+    enoughData: true,
+    totalNos,
+    silent,
+    answered: priced.length,
+    winnable: winnable.length,
+    valueGap: valueGap.length,
+    winnableRate: percent(winnable.length, priced.length),
+    // null when nobody landed in the winnable bucket — the UI must not print
+    // a median of an empty set as "$0", which would read as a real finding.
+    medianWinnableGap: winnableGaps.length ? median(winnableGaps) : null,
+    medianWinnablePrice: winnablePrices.length ? median(winnablePrices) : null,
+    thresholdRatio: WINNABLE_RATIO,
+  };
+}
+
+/**
+ * The same modelled revenue the price table already shows, re-cut as the
+ * decision it actually implies: charge more and reach fewer people, or charge
+ * less and reach more.
+ *
+ * Deliberately names BOTH prices instead of one winner. `recommendPrice`
+ * already picks the revenue-maximising price; this exists because
+ * revenue-maximising is only the right goal for some creators, and the report
+ * shouldn't quietly assume it is.
+ *
+ * Returns null when fewer than two prices have responses — there is no
+ * trade-off to show, and a "comparison" of one price against itself is noise.
+ */
+export function comparePricingStrategies(priceStats) {
+  const usable = priceStats.filter((p) => p.responses > 0);
+  if (usable.length < 2) return null;
+
+  const revenueMax = [...usable].sort((a, b) => b.modelledRevenue - a.modelledRevenue)[0];
+  // Ties on yes-rate break toward the higher price: if two prices convert
+  // identically, the cheaper one is strictly worse for the creator, and
+  // presenting it as "the reach play" would be actively bad advice.
+  const volumeMax = [...usable].sort((a, b) => b.yesRate - a.yesRate || b.amount - a.amount)[0];
+
+  const sameChoice = revenueMax.id === volumeMax.id;
+
+  // Customers per 1,000 visitors — same 1,000-visitor basis modelledRevenue
+  // uses, so the two numbers in this block are always directly comparable.
+  const customersAt = (p) => (p.yesRate * 1000) / 100;
+
+  return {
+    sameChoice,
+    revenueMax,
+    volumeMax,
+    revenueMaxCustomers: customersAt(revenueMax),
+    volumeMaxCustomers: customersAt(volumeMax),
+    // Guarded: a zero-revenue reach play (nobody said yes at that price)
+    // would make this Infinity and render as a nonsense uplift.
+    revenueUplift:
+      volumeMax.modelledRevenue > 0
+        ? ((revenueMax.modelledRevenue - volumeMax.modelledRevenue) / volumeMax.modelledRevenue) * 100
+        : null,
+    reachLoss: customersAt(volumeMax) - customersAt(revenueMax),
+  };
+}
+
 export function summariseConfidence(responses) {
   const yes = responses.filter((r) => r.answer === 'yes');
   const total = responses.length;
@@ -269,6 +385,12 @@ export function buildReport(variants, responses, test = {}) {
     suggested,
     recommendation,
     pricingConfidence: pricingConfidence(priceStats, confidence, suggested, { askConfidence, askSuggestedPrice }),
+    // Computed on every report, paid or free — these are pure functions over
+    // rows already in memory, so there's no cost to it. Whether they're
+    // RENDERED is the paywall's decision (see the `locked` fork in
+    // r/[token]/page.js), never this function's.
+    objections: analyseObjections(variants, responses),
+    strategies: comparePricingStrategies(priceStats),
     totalResponses: responses.length,
   };
 }

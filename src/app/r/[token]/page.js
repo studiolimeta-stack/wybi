@@ -12,6 +12,8 @@ import {
   SuggestedPriceBlock,
   PricingConfidenceBlock,
   FreeProgressBanner,
+  ObjectionBlock,
+  PricingStrategyBlock,
 } from '../../../components/ResultsBlocks.js';
 import { ManageTestMenu } from './ManageTestMenu.js';
 import { ShareTestButton } from './ShareTestButton.js';
@@ -67,9 +69,14 @@ function Paywall({ test, totalResponses, newResponses, recommendation, freeRecom
   const state = compareRecommendations(freeRecommendation, recommendation);
   const { headline: stateHeadline, body: stateBody } = CONVERSION_COPY[state];
 
+  // Never promise a block this test can't actually produce: the objection
+  // split is built from suggested prices, so a test with that follow-up
+  // switched off would unlock to a bullet that renders nothing.
   const benefits = [
     ...(recommendation.enoughData ? ['Latest best-performing tested price'] : []),
     'Purchase intent + modelled revenue at every price',
+    'Revenue-max vs reach-max price, side by side',
+    ...(test.ask_suggested_price ? ['Which no’s are winnable on price — and which aren’t'] : []),
     'Strong-intent and suggested-price analysis',
     'Pricing Confidence + CSV export',
   ];
@@ -358,8 +365,23 @@ export default async function ResultsPage({ params }) {
                   test={test}
                   winnerId={report.recommendation.enoughData ? report.recommendation.winner?.id : null}
                 />
+                {/* Paid-only extras. Gated on `test.is_paid`, NOT on this branch:
+                  * reaching the else of `locked` only means "not locked", which is
+                  * also true for a free test still under its free_response_limit.
+                  * Gating these on the branch alone would hand them to every free
+                  * report under the threshold — the exact opposite of the intent. */}
+                {test.is_paid && (
+                  <PricingStrategyBlock
+                    strategies={report.strategies}
+                    test={test}
+                    enoughData={report.recommendation.enoughData}
+                  />
+                )}
                 {test.ask_confidence && <ConfidenceBlock confidence={report.confidence} />}
                 {test.ask_suggested_price && <SuggestedPriceBlock suggested={report.suggested} test={test} />}
+                {test.is_paid && test.ask_suggested_price && (
+                  <ObjectionBlock objections={report.objections} test={test} />
+                )}
                 <PricingConfidenceBlock pricingConfidence={report.pricingConfidence} />
               </>
             )}

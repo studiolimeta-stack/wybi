@@ -432,6 +432,188 @@ export function SuggestedPriceBlock({ suggested, test }) {
   );
 }
 
+/**
+ * Paid-only. Splits the no-sayers into "would buy it cheaper" and "doesn't
+ * want it at your price at all" — the difference between a discount problem
+ * and a product problem, which is a different decision entirely.
+ *
+ * Only ever rendered from the unlocked branch of r/[token]/page.js.
+ */
+export function ObjectionBlock({ objections, test }) {
+  const fmt = (value) => formatPrice(Math.round(value * 100) / 100, test.currency, 'one_time');
+
+  if (!objections.enoughData) {
+    return (
+      <div className="card p-6">
+        <h2 className="text-lg font-extrabold tracking-tight">Which no&apos;s are winnable</h2>
+        <p className="hint mt-2">
+          {objections.answered === 0
+            ? 'Nobody who said no has named a price yet, so there is nothing to compare against.'
+            : `Only ${objections.answered} ${objections.answered === 1 ? 'person has' : 'people have'} said no and named a price. Splitting that few would be noise, not a finding — this fills in as more arrive.`}
+        </p>
+      </div>
+    );
+  }
+
+  const winnableShare = Math.round(objections.winnableRate);
+
+  return (
+    <div className="card p-6">
+      <h2 className="text-lg font-extrabold tracking-tight">Which no&apos;s are winnable</h2>
+      <p className="hint mt-1">
+        Every no-sayer&apos;s suggested price, compared against the price they were actually shown.
+      </p>
+
+      <div className="mt-4 rounded-xl border-2 border-ink p-4">
+        <p className="text-xs font-bold uppercase tracking-wider text-muted">Price objections</p>
+        <p className="mt-1 text-5xl font-extrabold tracking-tight">
+          {objections.winnable} <span className="text-2xl text-muted">of {objections.answered}</span>
+        </p>
+        {objections.medianWinnableGap !== null && (
+          <p className="hint mt-1">
+            Median gap of {fmt(objections.medianWinnableGap)} — these people want your offer and named a price
+            within reach of yours.
+          </p>
+        )}
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        <div className="rounded-xl border border-line bg-paper p-3">
+          <p className="hint">Winnable on price</p>
+          <p className="mt-1 text-xl font-extrabold tracking-tight sm:text-2xl">{winnableShare}%</p>
+          <p className="hint mt-1">Suggested at least {Math.round(objections.thresholdRatio * 100)}% of what you asked.</p>
+        </div>
+        <div className="rounded-xl border border-line bg-paper p-3">
+          <p className="hint">Not a price problem</p>
+          <p className="mt-1 text-xl font-extrabold tracking-tight sm:text-2xl">{objections.valueGap}</p>
+          <p className="hint mt-1">Named a price far below yours — discounting won&apos;t reach them.</p>
+        </div>
+      </div>
+
+      {objections.medianWinnablePrice !== null && objections.winnable > 0 && (
+        <p className="mt-4 text-sm leading-relaxed">
+          <span className="font-bold">What this means: </span>
+          the winnable group clustered around {fmt(objections.medianWinnablePrice)}. Meeting them there converts
+          them — but only {winnableShare}% of your no&apos;s, so weigh it against the margin you&apos;d give up on
+          everyone already saying yes.
+        </p>
+      )}
+
+      {objections.silent > 0 && (
+        <p className="hint mt-3">
+          {objections.silent} more said no without naming a price and {objections.silent === 1 ? 'is' : 'are'} not
+          counted above.
+        </p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Paid-only. Re-cuts the modelled revenue already in the price table as the
+ * trade-off it implies — charge more and reach fewer, or charge less and
+ * reach more — rather than assuming revenue-maximising is the creator's goal.
+ *
+ * Only ever rendered from the unlocked branch of r/[token]/page.js.
+ */
+export function PricingStrategyBlock({ strategies, test, enoughData }) {
+  if (!strategies) return null;
+
+  const fmt = (value) => formatPrice(value, test.currency, 'one_time');
+  const people = (value) => Math.round(value).toLocaleString('en-US');
+
+  if (strategies.sameChoice) {
+    return (
+      <div className="card p-6">
+        <h2 className="text-lg font-extrabold tracking-tight">Revenue vs reach</h2>
+        <p className="hint mt-1">Per 1,000 visitors, modelled from your tested prices.</p>
+        <div className="mt-4 rounded-xl border-2 border-ink p-4">
+          <p className="text-xs font-bold uppercase tracking-wider text-muted">No trade-off to make</p>
+          <p className="mt-1 text-4xl font-extrabold tracking-tight">{fmt(strategies.revenueMax.amount)}</p>
+          <p className="hint mt-1">
+            This price earns the most revenue <em>and</em> reaches the most people. That&apos;s unusual — normally
+            you have to pick one.
+          </p>
+        </div>
+        {!enoughData && (
+          <p className="hint mt-3">Still thin on data — treat this as directional until more responses land.</p>
+        )}
+      </div>
+    );
+  }
+
+  const columns = [
+    {
+      key: 'revenue',
+      label: 'Most revenue',
+      amount: strategies.revenueMax.amount,
+      revenue: strategies.revenueMax.modelledRevenue,
+      customers: strategies.revenueMaxCustomers,
+    },
+    {
+      key: 'reach',
+      label: 'Most customers',
+      amount: strategies.volumeMax.amount,
+      revenue: strategies.volumeMax.modelledRevenue,
+      customers: strategies.volumeMaxCustomers,
+    },
+  ];
+
+  return (
+    <div className="card p-6">
+      <h2 className="text-lg font-extrabold tracking-tight">Revenue vs reach</h2>
+      <p className="hint mt-1">
+        Two different goals point at two different prices. Per 1,000 visitors, modelled from your tested prices.
+      </p>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        {columns.map((col) => (
+          <div key={col.key} className="rounded-xl border-2 border-ink p-4">
+            <p className="text-xs font-bold uppercase tracking-wider text-muted">{col.label}</p>
+            <p className="mt-1 text-4xl font-extrabold tracking-tight">{fmt(col.amount)}</p>
+            <dl className="mt-3 space-y-1 text-sm">
+              <div className="flex justify-between gap-2">
+                <dt className="text-muted">Modelled revenue</dt>
+                <dd className="tabular-nums font-bold">{money(col.revenue, test.currency)}</dd>
+              </div>
+              <div className="flex justify-between gap-2">
+                <dt className="text-muted">Customers</dt>
+                <dd className="tabular-nums font-bold">{people(col.customers)}</dd>
+              </div>
+            </dl>
+          </div>
+        ))}
+      </div>
+
+      <p className="mt-4 text-sm leading-relaxed">
+        <span className="font-bold">The trade-off: </span>
+        {strategies.revenueUplift !== null ? (
+          <>
+            charging {fmt(strategies.revenueMax.amount)} models{' '}
+            {Math.round(strategies.revenueUplift)}% more revenue than {fmt(strategies.volumeMax.amount)}, but
+            reaches about {people(strategies.reachLoss)} fewer {Math.round(strategies.reachLoss) === 1 ? 'customer' : 'customers'} per
+            1,000 visitors.
+          </>
+        ) : (
+          <>
+            nobody said yes at {fmt(strategies.volumeMax.amount)}, so there is no revenue to compare against — the
+            reach play has no customers behind it yet.
+          </>
+        )}{' '}
+        Pick reach if you want testimonials, referrals or a base to upsell later; pick revenue if this is the whole
+        offer.
+      </p>
+
+      <p className="hint mt-3">
+        Modelled, not forecast — it assumes 1,000 visitors like the ones who already answered.
+      </p>
+      {!enoughData && (
+        <p className="hint mt-1">Still thin on data — treat this as directional until more responses land.</p>
+      )}
+    </div>
+  );
+}
+
 /** score/100 → good/warn/danger. Mirrors the thresholds `pricingConfidence()` in
  * lib/stats.js implies (>=70 solid, >=40 directional, below thin) — status colors
  * are reserved for this one severity signal, never reused on the four-part

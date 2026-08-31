@@ -1,24 +1,35 @@
 import { SiteHeader, SiteFooter } from '../../../components/SiteChrome.js';
 import { AdminDenied } from '../../../components/AdminDenied.js';
+import { AdminPagination } from '../../../components/AdminPagination.js';
 import { formatPrice } from '../../../lib/config.js';
-import { listPaymentsForAdmin, getPaymentSummary } from '../../../lib/admin.js';
+import { listPaymentsForAdmin, countPaymentsForAdmin, getPaymentSummary } from '../../../lib/admin.js';
 import { checkAdminAccess, adminHref } from '../../../lib/adminAuth.js';
 import { currentUser } from '../../../lib/session.js';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Admin — payments', robots: { index: false, follow: false } };
 
+const PAGE_SIZE = 15;
+
 export default async function AdminPaymentsPage({ searchParams }) {
-  const { key } = await searchParams;
+  const { key, page: pageParam } = await searchParams;
   const user = await currentUser();
   const { authorized, viaToken } = checkAdminAccess({ key, user });
 
   if (!authorized) return <AdminDenied user={user} />;
 
-  const [payments, paymentSummary] = await Promise.all([
-    listPaymentsForAdmin({ limit: 100 }),
-    getPaymentSummary(),
-  ]);
+  // Count first, clamp the requested page into range, THEN fetch that page's
+  // rows — same order as /admin/users and for the same reason: a stale or
+  // hand-edited `?page=` can't run past the real last page into an empty table.
+  const [totalPayments, paymentSummary] = await Promise.all([countPaymentsForAdmin(), getPaymentSummary()]);
+  const totalPages = Math.max(1, Math.ceil(totalPayments / PAGE_SIZE));
+  const requestedPage = Number.parseInt(pageParam, 10);
+  const page = Number.isFinite(requestedPage) ? Math.min(Math.max(1, requestedPage), totalPages) : 1;
+
+  const payments = await listPaymentsForAdmin({ limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE });
+
+  const pageHref = (targetPage) =>
+    adminHref('/admin/payments', { viaToken, key }, { page: targetPage > 1 ? targetPage : undefined });
 
   const knownEarningsCount = paymentSummary.earningsTotals.reduce((sum, t) => sum + t.known_count, 0);
 
@@ -121,11 +132,12 @@ export default async function AdminPaymentsPage({ searchParams }) {
               ))}
             </tbody>
           </table>
+          <AdminPagination page={page} totalPages={totalPages} total={totalPayments} pageSize={PAGE_SIZE} buildHref={pageHref} />
         </div>
 
         <p className="hint">
           Admin is read-only by design.
-          <a className="ml-2 underline" href={adminHref('/admin/payments', { viaToken, key })}>
+          <a className="ml-2 underline" href={pageHref(page)}>
             refresh
           </a>
         </p>

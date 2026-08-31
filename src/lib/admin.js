@@ -122,14 +122,20 @@ export async function listTestsForUserAdmin(userId) {
 }
 
 /** The `/admin/tests` table — every test, newest first, with its own response count. */
-export async function listRecentTestsForAdmin({ limit = 40 } = {}) {
+export async function listRecentTestsForAdmin({ limit = 40, offset = 0 } = {}) {
   const { rows } = await query(
     `SELECT t.id, t.slug, t.title, t.status, t.is_paid, t.created_at, t.reported_count, t.creator_token,
             (SELECT COUNT(*)::int FROM responses r WHERE r.test_id = t.id) AS response_count
-     FROM tests t ORDER BY t.created_at DESC LIMIT $1`,
-    [limit],
+     FROM tests t ORDER BY t.created_at DESC LIMIT $1 OFFSET $2`,
+    [limit, offset],
   );
   return rows;
+}
+
+/** Total test count — the denominator `/admin/tests` needs to render "Page X of Y". No filter: same unconditional set listRecentTestsForAdmin lists. */
+export async function countTestsForAdmin() {
+  const { rows } = await query('SELECT COUNT(*)::int AS total FROM tests');
+  return rows[0].total;
 }
 
 export async function getUserSummary() {
@@ -144,7 +150,7 @@ export async function getUserSummary() {
   return rows[0];
 }
 
-export async function listPaymentsForAdmin({ limit = 100 } = {}) {
+export async function listPaymentsForAdmin({ limit = 100, offset = 0 } = {}) {
   const { rows } = await query(
     `SELECT p.id, p.provider, p.provider_payment_id, p.amount, p.currency, p.status, p.created_at,
             p.fee, p.earnings,
@@ -154,10 +160,16 @@ export async function listPaymentsForAdmin({ limit = 100 } = {}) {
      LEFT JOIN users u ON u.id = p.user_id
      LEFT JOIN tests t ON t.id = p.test_id
      ORDER BY p.created_at DESC
-     LIMIT $1`,
-    [limit],
+     LIMIT $1 OFFSET $2`,
+    [limit, offset],
   );
   return rows;
+}
+
+/** Total payment count — the denominator `/admin/payments` needs to render "Page X of Y". No filter: same unconditional set listPaymentsForAdmin lists (every status, every provider — including dev_mock/failed, not just succeeded). */
+export async function countPaymentsForAdmin() {
+  const { rows } = await query('SELECT COUNT(*)::int AS total FROM payments');
+  return rows[0].total;
 }
 
 /**

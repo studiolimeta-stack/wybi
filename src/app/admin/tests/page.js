@@ -1,20 +1,34 @@
 import { SiteHeader, SiteFooter } from '../../../components/SiteChrome.js';
 import { AdminDenied } from '../../../components/AdminDenied.js';
-import { listRecentTestsForAdmin } from '../../../lib/admin.js';
+import { AdminPagination } from '../../../components/AdminPagination.js';
+import { listRecentTestsForAdmin, countTestsForAdmin } from '../../../lib/admin.js';
 import { checkAdminAccess, adminHref } from '../../../lib/adminAuth.js';
 import { currentUser } from '../../../lib/session.js';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Admin — tests', robots: { index: false, follow: false } };
 
+const PAGE_SIZE = 15;
+
 export default async function AdminTestsPage({ searchParams }) {
-  const { key } = await searchParams;
+  const { key, page: pageParam } = await searchParams;
   const user = await currentUser();
   const { authorized, viaToken } = checkAdminAccess({ key, user });
 
   if (!authorized) return <AdminDenied user={user} />;
 
-  const tests = await listRecentTestsForAdmin({ limit: 40 });
+  // Count first, clamp the requested page into range, THEN fetch that page's
+  // rows — same order as /admin/users and /admin/payments, and for the same
+  // reason: a stale or hand-edited `?page=` can't run past the real last page.
+  const totalTests = await countTestsForAdmin();
+  const totalPages = Math.max(1, Math.ceil(totalTests / PAGE_SIZE));
+  const requestedPage = Number.parseInt(pageParam, 10);
+  const page = Number.isFinite(requestedPage) ? Math.min(Math.max(1, requestedPage), totalPages) : 1;
+
+  const tests = await listRecentTestsForAdmin({ limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE });
+
+  const pageHref = (targetPage) =>
+    adminHref('/admin/tests', { viaToken, key }, { page: targetPage > 1 ? targetPage : undefined });
 
   return (
     <>
@@ -35,6 +49,13 @@ export default async function AdminTestsPage({ searchParams }) {
               </tr>
             </thead>
             <tbody>
+              {tests.length === 0 && (
+                <tr>
+                  <td className="py-3 text-muted" colSpan={5}>
+                    No tests yet.
+                  </td>
+                </tr>
+              )}
               {tests.map((test) => (
                 <tr key={test.id} className="border-b border-line">
                   <td className="py-2">{test.title}</td>
@@ -56,11 +77,12 @@ export default async function AdminTestsPage({ searchParams }) {
               ))}
             </tbody>
           </table>
+          <AdminPagination page={page} totalPages={totalPages} total={totalTests} pageSize={PAGE_SIZE} buildHref={pageHref} />
         </div>
 
         <p className="hint">
           Admin is read-only by design. Pause or delete an abusive test from its results link above.
-          <a className="ml-2 underline" href={adminHref('/admin/tests', { viaToken, key })}>
+          <a className="ml-2 underline" href={pageHref(page)}>
             refresh
           </a>
         </p>

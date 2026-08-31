@@ -190,7 +190,7 @@ export async function countPaymentsForAdmin() {
  * stays absent from the list rather than rendering a misleading $0.
  */
 export async function getPaymentSummary() {
-  const [totals, earningsTotals, counts] = await Promise.all([
+  const [totals, earningsTotals, feeTotals, counts] = await Promise.all([
     query(`
       SELECT currency, COALESCE(SUM(amount), 0) AS total
       FROM payments WHERE status = 'succeeded'
@@ -199,13 +199,28 @@ export async function getPaymentSummary() {
       SELECT currency, SUM(earnings) AS total, COUNT(earnings)::int AS known_count
       FROM payments WHERE status = 'succeeded' AND provider = 'paddle'
       GROUP BY currency HAVING SUM(earnings) IS NOT NULL ORDER BY total DESC`),
+    // `gross` here is scoped to the SAME row set as `total` (fee) — real
+    // Paddle transactions with a known fee, not every succeeded row. A
+    // blended rate divided against the overall gross (which includes
+    // zero-fee dev_mock rows) would understate the real rate; this keeps
+    // numerator and denominator honest against each other.
+    query(`
+      SELECT currency, SUM(fee) AS total, SUM(amount) AS gross, COUNT(*)::int AS known_count
+      FROM payments WHERE status = 'succeeded' AND provider = 'paddle' AND fee IS NOT NULL
+      GROUP BY currency ORDER BY total DESC`),
     query(`
       SELECT COUNT(*) FILTER (WHERE status = 'succeeded')::int AS succeeded_count,
              COUNT(*) FILTER (WHERE provider = 'dev_mock' AND status = 'succeeded')::int AS mock_count,
+             COUNT(*) FILTER (WHERE provider = 'paddle' AND status = 'succeeded')::int AS paddle_count,
              COUNT(*) FILTER (WHERE provider = 'paddle' AND status = 'succeeded' AND earnings IS NULL)::int
                AS paddle_missing_earnings_count
       FROM payments`),
   ]);
 
-  return { ...counts.rows[0], totals: totals.rows, earningsTotals: earningsTotals.rows };
+  return {
+    ...counts.rows[0],
+    totals: totals.rows,
+    earningsTotals: earningsTotals.rows,
+    feeTotals: feeTotals.rows,
+  };
 }

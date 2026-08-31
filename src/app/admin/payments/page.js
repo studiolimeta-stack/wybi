@@ -31,7 +31,35 @@ export default async function AdminPaymentsPage({ searchParams }) {
   const pageHref = (targetPage) =>
     adminHref('/admin/payments', { viaToken, key }, { page: targetPage > 1 ? targetPage : undefined });
 
-  const knownEarningsCount = paymentSummary.earningsTotals.reduce((sum, t) => sum + t.known_count, 0);
+  // Every money stat is broken down by currency, never summed across them —
+  // same discipline as the table itself: `$14.90 + €14.90` joined as text is
+  // honest, a single figure adding them together is not.
+  const grossText = paymentSummary.totals.length
+    ? paymentSummary.totals.map((t) => formatPrice(t.total, t.currency)).join(' + ')
+    : '—';
+  const feeText = paymentSummary.feeTotals.length
+    ? paymentSummary.feeTotals.map((t) => formatPrice(t.total, t.currency)).join(' + ')
+    : '—';
+  const netText = paymentSummary.earningsTotals.length
+    ? paymentSummary.earningsTotals.map((t) => formatPrice(t.total, t.currency)).join(' + ')
+    : '—';
+  // A ratio, not an amount — safe as one blended figure PER currency (never
+  // combining two currencies' fee/gross into one division), computed against
+  // the SAME row set feeTotals.total came from, not the overall gross (which
+  // would include dev_mock's zero-fee rows and understate the real rate).
+  const rateText = paymentSummary.feeTotals.length
+    ? paymentSummary.feeTotals.map((t) => `${((Number(t.total) / Number(t.gross)) * 100).toFixed(1)}%`).join(' + ')
+    : '—';
+
+  const statTiles = [
+    { label: 'Succeeded', value: paymentSummary.succeeded_count },
+    { label: 'Real (Paddle)', value: paymentSummary.paddle_count },
+    { label: 'Dev-mode (test)', value: paymentSummary.mock_count },
+    { label: 'Gross revenue', value: grossText },
+    { label: 'Paddle fees', value: feeText },
+    { label: 'Net earnings', value: netText },
+    { label: 'Blended fee rate', value: rateText },
+  ];
 
   return (
     <>
@@ -39,48 +67,31 @@ export default async function AdminPaymentsPage({ searchParams }) {
       <main className="wrap pt-6 pb-16 space-y-6">
         <h1 className="text-2xl font-extrabold tracking-tight">Admin — Payments</h1>
 
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {statTiles.map((tile) => (
+            <div key={tile.label} className="card p-4">
+              <p className="text-xs font-bold uppercase tracking-wider text-muted">{tile.label}</p>
+              <p className="text-2xl font-extrabold">{tile.value}</p>
+            </div>
+          ))}
+        </div>
+        {/* Paddle's Billing API has no balance/payout endpoint at all (checked
+          * directly: 404, not a permissions gate) — "Net earnings" above,
+          * derived from real transactions, is the closest honest substitute
+          * this app can show, not Paddle's own ledger. It won't reflect
+          * refunds/adjustments, which this API key also can't currently read
+          * (403 on /adjustments). */}
+        {paymentSummary.paddle_missing_earnings_count > 0 && (
+          <p className="hint">
+            <code>provider = &apos;dev_mock&apos;</code> rows are simulated unlocks, not real revenue —{' '}
+            {paymentSummary.paddle_missing_earnings_count} earlier real transaction
+            {paymentSummary.paddle_missing_earnings_count === 1 ? '' : 's'} predate fee/earnings tracking and{' '}
+            {paymentSummary.paddle_missing_earnings_count === 1 ? 'is' : 'are'} excluded from the stats above.
+          </p>
+        )}
+
         <div className="card p-5 overflow-x-auto">
-          <h2 className="font-extrabold">
-            Payments
-            {paymentSummary.mock_count > 0 && (
-              <span className="pill ml-2 bg-locked">{paymentSummary.mock_count} dev-mode</span>
-            )}
-          </h2>
-          {/* Totalled per currency, never summed across them: a single figure
-            * mixing EUR and USD unlocks is not a number, it is a coincidence. */}
-          <p className="hint mt-1">
-            {paymentSummary.succeeded_count} succeeded ·{' '}
-            {paymentSummary.totals.length
-              ? paymentSummary.totals.map((t) => formatPrice(t.total, t.currency)).join(' + ')
-              : '—'}{' '}
-            gross. <code>provider = &apos;dev_mock&apos;</code> rows are simulated unlocks, not real revenue.
-          </p>
-          {/* Paddle's own fee/earnings breakdown, summed. The closest honest
-            * substitute for "account balance" this app can show — Paddle's
-            * Billing API has no balance/payout endpoint at all (checked
-            * directly: 404, not a permissions gate), so there is no single
-            * authoritative number to fetch. This is a derived total from real
-            * transactions, not Paddle's own ledger — it won't reflect
-            * refunds/adjustments, which this API key also can't currently
-            * read (403 on /adjustments). */}
-          <p className="hint mt-1">
-            {paymentSummary.earningsTotals.length ? (
-              <>
-                You keep {paymentSummary.earningsTotals.map((t) => formatPrice(t.total, t.currency)).join(' + ')}{' '}
-                after Paddle&apos;s fees, across {knownEarningsCount} real transaction{knownEarningsCount === 1 ? '' : 's'}.
-              </>
-            ) : (
-              'No fee/earnings data yet — populated from Paddle on each new real transaction.'
-            )}
-            {paymentSummary.paddle_missing_earnings_count > 0 && (
-              <>
-                {' '}
-                {paymentSummary.paddle_missing_earnings_count} earlier real transaction
-                {paymentSummary.paddle_missing_earnings_count === 1 ? '' : 's'} predate this and{' '}
-                {paymentSummary.paddle_missing_earnings_count === 1 ? 'is' : 'are'} not counted.
-              </>
-            )}
-          </p>
+          <h2 className="font-extrabold">Payments</h2>
           <table className="data-table mt-3 w-full text-sm">
             <thead>
               <tr className="text-left border-b-2 border-ink">

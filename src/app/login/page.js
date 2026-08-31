@@ -13,6 +13,7 @@ const ERRORS = {
   email_unverified: 'That Google account’s email isn’t verified, so we can’t use it.',
   expired_link: 'That link has expired or was already used. Request a new one below.',
   invalid_email: 'That email did not look right.',
+  banned: 'This account has been suspended.',
 };
 
 export default async function LoginPage({ searchParams }) {

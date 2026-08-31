@@ -51,7 +51,7 @@ function userFilterWhere(filter) {
  */
 export async function listUsersForAdmin({ limit = 100, offset = 0, filter = 'all' } = {}) {
   const { rows } = await query(
-    `SELECT u.id, u.email, u.name, u.email_verified_at, u.created_at, u.last_login_at,
+    `SELECT u.id, u.email, u.name, u.email_verified_at, u.created_at, u.last_login_at, u.banned_at,
             (SELECT COUNT(*)::int FROM tests t WHERE t.user_id = u.id AND t.status <> 'archived')
               AS test_count,
             (SELECT COUNT(*)::int FROM tests t WHERE t.user_id = u.id AND t.is_paid)
@@ -86,7 +86,7 @@ export async function countUsersForAdmin({ filter = 'all' } = {}) {
 /** Single-user lookup for the /admin/users/[id] detail page. Null if the id doesn't exist. */
 export async function getUserForAdmin(id) {
   const { rows } = await query(
-    `SELECT u.id, u.email, u.name, u.email_verified_at, u.created_at, u.last_login_at,
+    `SELECT u.id, u.email, u.name, u.email_verified_at, u.created_at, u.last_login_at, u.banned_at,
             (SELECT array_agg(DISTINCT i.provider ORDER BY i.provider) FROM identities i WHERE i.user_id = u.id)
               AS providers,
             (SELECT COALESCE(SUM(p.amount), 0) FROM payments p WHERE p.user_id = u.id AND p.status = 'succeeded')

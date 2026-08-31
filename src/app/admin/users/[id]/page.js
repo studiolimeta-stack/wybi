@@ -5,16 +5,21 @@ import { formatPrice } from '../../../../lib/config.js';
 import { getUserForAdmin, listTestsForUserAdmin } from '../../../../lib/admin.js';
 import { checkAdminAccess } from '../../../../lib/adminAuth.js';
 import { currentUser } from '../../../../lib/session.js';
+import { BanUserButton } from './BanUserButton.js';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Admin — user', robots: { index: false, follow: false } };
 
 /**
- * Read-only account detail behind the user row on /admin. Deliberately does
- * NOT impersonate the account (no session swap, no "log in as") — it links
- * out to `/r/[creator_token]`, the same results page the creator themselves
+ * Account detail behind the user row on /admin. Deliberately does NOT
+ * impersonate the account (no session swap, no "log in as") — it links out
+ * to `/r/[creator_token]`, the same results page the creator themselves
  * uses, which needs only the token, not their session. That's the real
  * "what they see," with no new auth surface to get wrong.
+ *
+ * The one exception to "admin is read-only" (see /admin/tests) is the ban
+ * control below — banning has no existing creator-facing surface to reuse
+ * the way test moderation does, so it gets a real admin-only mutation.
  */
 export default async function AdminUserPage({ params, searchParams }) {
   const { id } = await params;
@@ -52,16 +57,23 @@ export default async function AdminUserPage({ params, searchParams }) {
           ← Back to users
         </Link>
 
-        <div>
-          <h1 className="text-2xl font-extrabold tracking-tight">{target.name || target.email}</h1>
-          <p className="hint mt-1">
-            {target.email}
-            {!target.email_verified_at && ' ⚠️ unverified'} ·{' '}
-            {(target.providers || []).join(', ') || 'email login'} · joined{' '}
-            {new Date(target.created_at).toLocaleDateString()}
-            {target.last_login_at && ` · last login ${new Date(target.last_login_at).toLocaleDateString()}`}
-            {target.total_paid > 0 && ` · ${formatPrice(target.total_paid, target.paid_currency)} spent`}
-          </p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-extrabold tracking-tight">
+              {target.name || target.email}
+              {target.banned_at && <span className="pill ml-2 border-alert bg-white text-alert">Banned</span>}
+            </h1>
+            <p className="hint mt-1">
+              {target.email}
+              {!target.email_verified_at && ' ⚠️ unverified'} ·{' '}
+              {(target.providers || []).join(', ') || 'email login'} · joined{' '}
+              {new Date(target.created_at).toLocaleDateString()}
+              {target.last_login_at && ` · last login ${new Date(target.last_login_at).toLocaleDateString()}`}
+              {target.total_paid > 0 && ` · ${formatPrice(target.total_paid, target.paid_currency)} spent`}
+              {target.banned_at && ` · banned ${new Date(target.banned_at).toLocaleDateString()}`}
+            </p>
+          </div>
+          <BanUserButton userId={target.id} banned={Boolean(target.banned_at)} adminKey={viaToken ? key : null} />
         </div>
 
         <div className="card p-5 overflow-x-auto">
@@ -111,7 +123,8 @@ export default async function AdminUserPage({ params, searchParams }) {
 
         <p className="hint">
           &quot;results (as them)&quot; opens the exact page this creator sees — same URL they'd bookmark, no
-          impersonation needed. Admin is read-only; nothing here can be changed from this screen.
+          impersonation needed. Test moderation (pause/delete) happens from that page, not here. Banning is the
+          one action available directly on this screen.
         </p>
       </main>
       <SiteFooter />

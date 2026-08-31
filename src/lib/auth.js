@@ -77,11 +77,16 @@ export async function lookupSession(token) {
   if (!token) return null;
 
   const { rows } = await query(
+    // `u.banned_at IS NULL` belongs in this WHERE, not a separate check after
+    // the fact: it means a ban takes effect on the very next request, for
+    // every session that account has, without looping over and revoking each
+    // row individually. Same shape as the expires_at/revoked_at checks right
+    // next to it — one banned account simply has no valid session, period.
     `SELECT s.id AS session_id, s.last_seen_at,
             u.id, u.email, u.name, u.avatar_url, u.email_verified_at
      FROM sessions s
      JOIN users u ON u.id = s.user_id
-     WHERE s.token_hash = $1 AND s.revoked_at IS NULL AND s.expires_at > now()`,
+     WHERE s.token_hash = $1 AND s.revoked_at IS NULL AND s.expires_at > now() AND u.banned_at IS NULL`,
     [hashToken(token)],
   );
   const row = rows[0];
@@ -197,6 +202,38 @@ export async function findOrCreateUserByIdentity({ provider, providerUserId, ema
 export async function getUserById(userId) {
   const { rows } = await query('SELECT * FROM users WHERE id = $1', [userId]);
   return rows[0] ?? null;
+}
+
+/**
+ * Bans/unbans an account. Banning does three things, deliberately in one
+ * transaction: sets `banned_at` (which `lookupSession` already excludes, so
+ * every session this account holds — anywhere, any device — stops working on
+ * its very next request), revokes those sessions explicitly too (belt and
+ * suspenders: an audit trail on `sessions.revoked_at`, and correctness even
+ * if some future query path forgets the `banned_at` filter), and pauses every
+ * active test the account owns so abusive content stops collecting new
+ * responses immediately, not just at next login. Unbanning only clears
+ * `banned_at` — it never un-pauses tests, since a creator may have paused
+ * some of those themselves before the ban and the account is the only one
+ * who should choose to resume them.
+ */
+export async function setUserBanned(userId, banned) {
+  return transaction(async (client) => {
+    const { rows } = await client.query(
+      `UPDATE users SET banned_at = CASE WHEN $2 THEN now() ELSE NULL END WHERE id = $1 RETURNING *`,
+      [userId, banned],
+    );
+    if (banned) {
+      await client.query('UPDATE sessions SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL', [
+        userId,
+      ]);
+      await client.query(
+        `UPDATE tests SET status = 'paused', updated_at = now() WHERE user_id = $1 AND status = 'active'`,
+        [userId],
+      );
+    }
+    return rows[0] ?? null;
+  });
 }
 
 export async function listIdentities(userId) {

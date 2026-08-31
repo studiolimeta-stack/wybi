@@ -60,6 +60,14 @@ export async function GET(request) {
       avatarUrl: profile.picture || null,
     });
 
+    // A banned account must never get a new session — lookupSession already
+    // refuses any session this account holds, but that only matters once one
+    // exists. Checked here, not inside findOrCreateUserByIdentity, because
+    // that function is a pure identity resolver with no auth-policy opinion.
+    if (user.banned_at) {
+      return Response.redirect(new URL('/login?error=banned', config.appUrl).toString(), 302);
+    }
+
     const ipHash = hashIp(clientIp(request.headers));
     await startSession(user.id, { userAgent: request.headers.get('user-agent'), ipHash });
     const claimed = await claimTestsFromCookie(user.id);

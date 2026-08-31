@@ -31,6 +31,12 @@ export async function POST(request) {
     name,
   });
 
+  // Same ban check as the real Google/email callbacks — the dev picker must
+  // not be a way around a ban either.
+  if (user.banned_at) {
+    return Response.redirect(new URL('/login?error=banned', config.appUrl).toString(), 302);
+  }
+
   const ipHash = hashIp(clientIp(request.headers));
   await startSession(user.id, { userAgent: request.headers.get('user-agent'), ipHash });
   const claimed = await claimTestsFromCookie(user.id);

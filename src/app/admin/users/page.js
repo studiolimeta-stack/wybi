@@ -119,6 +119,7 @@ export default async function AdminUsersPage({ searchParams }) {
                     <span className={`pill ${u.paid_test_count > 0 ? 'bg-white text-ok border-ok' : 'bg-locked'}`}>
                       {u.paid_test_count > 0 ? 'Paid' : 'Free'}
                     </span>
+                    {u.banned_at && <span className="pill ml-1 border-alert bg-white text-alert">Banned</span>}
                   </td>
                   <td className="py-2">
                     <a href={userHref(u.id)} className="font-semibold underline">

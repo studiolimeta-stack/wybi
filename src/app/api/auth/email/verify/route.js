@@ -21,6 +21,12 @@ export async function GET(request) {
     email: claimResult.email,
   });
 
+  // Same ban check as the Google callback — a clicked magic link must not
+  // hand a banned account a fresh session either.
+  if (user.banned_at) {
+    return Response.redirect(new URL('/login?error=banned', config.appUrl).toString(), 302);
+  }
+
   const ipHash = hashIp(clientIp(request.headers));
   await startSession(user.id, { userAgent: request.headers.get('user-agent'), ipHash });
   const claimed = await claimTestsFromCookie(user.id);

@@ -108,6 +108,17 @@ export async function listTestsForUserAdmin(userId) {
   return rows;
 }
 
+/** The `/admin/tests` table — every test, newest first, with its own response count. */
+export async function listRecentTestsForAdmin({ limit = 40 } = {}) {
+  const { rows } = await query(
+    `SELECT t.id, t.slug, t.title, t.status, t.is_paid, t.created_at, t.reported_count, t.creator_token,
+            (SELECT COUNT(*)::int FROM responses r WHERE r.test_id = t.id) AS response_count
+     FROM tests t ORDER BY t.created_at DESC LIMIT $1`,
+    [limit],
+  );
+  return rows;
+}
+
 export async function getUserSummary() {
   const { rows } = await query(`
     SELECT COUNT(*)::int AS total,

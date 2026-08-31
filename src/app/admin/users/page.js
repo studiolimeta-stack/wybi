@@ -1,0 +1,128 @@
+import { SiteHeader, SiteFooter } from '../../../components/SiteChrome.js';
+import { AdminDenied } from '../../../components/AdminDenied.js';
+import { formatPrice } from '../../../lib/config.js';
+import { listUsersForAdmin, getUserSummary } from '../../../lib/admin.js';
+import { checkAdminAccess, adminHref } from '../../../lib/adminAuth.js';
+import { currentUser } from '../../../lib/session.js';
+
+export const dynamic = 'force-dynamic';
+export const metadata = { title: 'Admin — users', robots: { index: false, follow: false } };
+
+const USER_FILTERS = [
+  { value: 'all', label: 'All' },
+  { value: 'paid', label: 'Paid' },
+  { value: 'free', label: 'Free' },
+];
+
+export default async function AdminUsersPage({ searchParams }) {
+  const { key, users: userFilterParam } = await searchParams;
+  const user = await currentUser();
+  const { authorized, viaToken } = checkAdminAccess({ key, user });
+
+  if (!authorized) return <AdminDenied user={user} />;
+
+  const userFilter = USER_FILTERS.some((f) => f.value === userFilterParam) ? userFilterParam : 'all';
+  const [users, userSummary] = await Promise.all([
+    listUsersForAdmin({ limit: 100, filter: userFilter }),
+    getUserSummary(),
+  ]);
+
+  // Same token-passthrough rule as the filter tabs — /admin/users/[id] is a
+  // separate page, not a query param on this one, so it needs its own key.
+  const userHref = (id) => (viaToken ? `/admin/users/${id}?key=${encodeURIComponent(key)}` : `/admin/users/${id}`);
+
+  return (
+    <>
+      <SiteHeader />
+      <main className="wrap pt-6 pb-16 space-y-6">
+        <h1 className="text-2xl font-extrabold tracking-tight">Admin — Users</h1>
+
+        <div className="grid gap-3 sm:grid-cols-5">
+          {[
+            { label: 'Users', value: userSummary.total },
+            { label: 'Paid', value: userSummary.paid },
+            { label: 'Free', value: userSummary.total - userSummary.paid },
+            { label: 'Verified', value: userSummary.verified },
+            { label: 'Active (30d)', value: userSummary.active_30d },
+          ].map((tile) => (
+            <div key={tile.label} className="card p-4">
+              <p className="text-xs font-bold uppercase tracking-wider text-muted">{tile.label}</p>
+              <p className="text-2xl font-extrabold">{tile.value}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="card p-5 overflow-x-auto">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="font-extrabold">Users</h2>
+            <div className="flex gap-1 rounded-full border-2 border-ink bg-white p-1">
+              {USER_FILTERS.map((f) => (
+                <a
+                  key={f.value}
+                  href={adminHref('/admin/users', { viaToken, key }, { users: f.value === 'all' ? undefined : f.value })}
+                  className={`rounded-full px-3 py-1 text-xs font-bold ${
+                    userFilter === f.value ? 'bg-ink text-white' : 'text-muted'
+                  }`}
+                >
+                  {f.label}
+                </a>
+              ))}
+            </div>
+          </div>
+
+          <table className="data-table mt-3 w-full text-sm">
+            <thead>
+              <tr className="text-left border-b-2 border-ink">
+                <th className="py-2">Status</th>
+                <th className="py-2">Name / Email</th>
+                <th className="py-2">Sign-in</th>
+                <th className="py-2 text-right">Tests</th>
+                <th className="py-2 text-right">Responses</th>
+                <th className="py-2 text-right">Spent</th>
+                <th className="py-2">Joined</th>
+                <th className="py-2">Last login</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.length === 0 && (
+                <tr>
+                  <td className="py-3 text-muted" colSpan={8}>
+                    No accounts match this filter.
+                  </td>
+                </tr>
+              )}
+              {users.map((u) => (
+                <tr key={u.id} className="border-b border-line">
+                  <td className="py-2">
+                    <span className={`pill ${u.paid_test_count > 0 ? 'bg-white text-ok border-ok' : 'bg-locked'}`}>
+                      {u.paid_test_count > 0 ? 'Paid' : 'Free'}
+                    </span>
+                  </td>
+                  <td className="py-2">
+                    <a href={userHref(u.id)} className="font-semibold underline">
+                      {u.name || u.email}
+                    </a>
+                    <p className="hint">
+                      {u.email}
+                      {!u.email_verified_at && ' ⚠️ unverified'}
+                    </p>
+                  </td>
+                  <td className="py-2">{(u.providers || []).join(', ') || '—'}</td>
+                  <td className="py-2 text-right tabular-nums">{u.test_count}</td>
+                  <td className="py-2 text-right tabular-nums">{u.response_count}</td>
+                  <td className="py-2 text-right tabular-nums">
+                    {u.total_paid > 0 ? formatPrice(u.total_paid, u.paid_currency) : '—'}
+                  </td>
+                  <td className="py-2">{new Date(u.created_at).toLocaleDateString()}</td>
+                  <td className="py-2">{u.last_login_at ? new Date(u.last_login_at).toLocaleDateString() : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="hint mt-2">⚠️ unverified = email captured at test creation but never confirmed by a real login.</p>
+        </div>
+      </main>
+      <SiteFooter />
+    </>
+  );
+}

@@ -1,7 +1,9 @@
 import Link from 'next/link';
 import { SiteHeader, SiteFooter } from '../../../../components/SiteChrome.js';
+import { AdminDenied } from '../../../../components/AdminDenied.js';
 import { formatPrice } from '../../../../lib/config.js';
-import { isAdminEmail, isValidAdminToken, getUserForAdmin, listTestsForUserAdmin } from '../../../../lib/admin.js';
+import { getUserForAdmin, listTestsForUserAdmin } from '../../../../lib/admin.js';
+import { checkAdminAccess } from '../../../../lib/adminAuth.js';
 import { currentUser } from '../../../../lib/session.js';
 
 export const dynamic = 'force-dynamic';
@@ -17,23 +19,12 @@ export const metadata = { title: 'Admin — user', robots: { index: false, follo
 export default async function AdminUserPage({ params, searchParams }) {
   const { id } = await params;
   const { key } = await searchParams;
-  const viaToken = isValidAdminToken(key);
   const adminUser = await currentUser();
+  const { authorized, viaToken } = checkAdminAccess({ key, user: adminUser });
 
-  if (!viaToken && !isAdminEmail(adminUser?.email)) {
-    return (
-      <>
-        <SiteHeader />
-        <main className="wrap pt-6 pb-16">
-          <h1 className="text-2xl font-extrabold tracking-tight">Admin</h1>
-          <p className="mt-2 text-muted">Log in with an admin account to see this page.</p>
-        </main>
-        <SiteFooter />
-      </>
-    );
-  }
+  if (!authorized) return <AdminDenied user={adminUser} />;
 
-  const backHref = viaToken ? `/admin?key=${encodeURIComponent(key)}` : '/admin';
+  const backHref = viaToken ? `/admin/users?key=${encodeURIComponent(key)}` : '/admin/users';
   const target = await getUserForAdmin(id);
 
   if (!target) {
@@ -42,7 +33,7 @@ export default async function AdminUserPage({ params, searchParams }) {
         <SiteHeader />
         <main className="wrap pt-6 pb-16">
           <Link href={backHref} className="hint underline">
-            ← Back to admin
+            ← Back to users
           </Link>
           <p className="mt-4 text-muted">No user with id {id}.</p>
         </main>
@@ -58,7 +49,7 @@ export default async function AdminUserPage({ params, searchParams }) {
       <SiteHeader />
       <main className="wrap pt-6 pb-16 space-y-6">
         <Link href={backHref} className="hint underline">
-          ← Back to admin
+          ← Back to users
         </Link>
 
         <div>

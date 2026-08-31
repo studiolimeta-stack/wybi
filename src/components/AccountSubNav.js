@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { AdminNavDropdown } from './AdminNavDropdown.js';
 
 const BASE_TABS = [
   { href: '/dashboard', label: 'My tests' },
@@ -33,7 +34,6 @@ function initialOf(user) {
  */
 export function AccountSubNav({ user, isAdmin = false }) {
   const pathname = usePathname();
-  const tabs = isAdmin ? [...BASE_TABS, { href: '/admin', label: 'Admin' }] : BASE_TABS;
 
   async function logout() {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -48,7 +48,7 @@ export function AccountSubNav({ user, isAdmin = false }) {
     <div className="sticky top-20 z-40 border-b border-line bg-paper">
       <nav aria-label="Account navigation" className="wrap flex items-center justify-between gap-4 py-2.5">
         <div className="flex gap-1 overflow-x-auto">
-          {tabs.map((tab) => {
+          {BASE_TABS.map((tab) => {
             const isActive = isActiveTab(pathname, tab.href);
             return (
               <Link
@@ -63,6 +63,10 @@ export function AccountSubNav({ user, isAdmin = false }) {
               </Link>
             );
           })}
+          {/* Its own component, not a plain tab: admin is four separate pages
+            * now (Overview/Users/Payments/Tests), so this needs a dropdown
+            * rather than a single link. */}
+          {isAdmin && <AdminNavDropdown />}
         </div>
 
         <div className="flex shrink-0 items-center gap-3 sm:gap-4">

@@ -1,6 +1,7 @@
-import { SiteHeader, SiteFooter } from '../../../components/SiteChrome.js';
+import { AdminShell } from '../../../components/AdminShell.js';
 import { AdminDenied } from '../../../components/AdminDenied.js';
 import { AdminPagination } from '../../../components/AdminPagination.js';
+import { AdminSortHeader } from '../../../components/AdminSortHeader.js';
 import { formatPrice } from '../../../lib/config.js';
 import { listUsersForAdmin, countUsersForAdmin, getUserSummary } from '../../../lib/admin.js';
 import { checkAdminAccess, adminHref } from '../../../lib/adminAuth.js';
@@ -16,15 +17,18 @@ const USER_FILTERS = [
 ];
 
 const PAGE_SIZE = 15;
+const USER_SORT_KEYS = new Set(['access', 'name', 'provider', 'tests', 'responses', 'spent', 'joined', 'login']);
 
 export default async function AdminUsersPage({ searchParams }) {
-  const { key, users: userFilterParam, page: pageParam } = await searchParams;
+  const { key, users: userFilterParam, page: pageParam, sort: sortParam, dir: dirParam } = await searchParams;
   const user = await currentUser();
   const { authorized, viaToken } = checkAdminAccess({ key, user });
 
   if (!authorized) return <AdminDenied user={user} />;
 
   const userFilter = USER_FILTERS.some((f) => f.value === userFilterParam) ? userFilterParam : 'all';
+  const sort = USER_SORT_KEYS.has(sortParam) ? sortParam : 'joined';
+  const direction = dirParam === 'asc' ? 'asc' : 'desc';
 
   // Count first, then clamp the requested page into range, THEN fetch that
   // page's rows — sequential rather than parallel on purpose, so a stale or
@@ -38,7 +42,7 @@ export default async function AdminUsersPage({ searchParams }) {
   const requestedPage = Number.parseInt(pageParam, 10);
   const page = Number.isFinite(requestedPage) ? Math.min(Math.max(1, requestedPage), totalPages) : 1;
 
-  const users = await listUsersForAdmin({ limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE, filter: userFilter });
+  const users = await listUsersForAdmin({ limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE, filter: userFilter, sort, direction });
 
   // Same token-passthrough rule as the filter tabs — /admin/users/[id] is a
   // separate page, not a query param on this one, so it needs its own key.
@@ -50,13 +54,19 @@ export default async function AdminUsersPage({ searchParams }) {
   const pageHref = (targetPage) =>
     adminHref('/admin/users', { viaToken, key }, {
       users: userFilter === 'all' ? undefined : userFilter,
+      sort,
+      dir: direction,
       page: targetPage > 1 ? targetPage : undefined,
+    });
+  const sortHref = (nextSort) =>
+    adminHref('/admin/users', { viaToken, key }, {
+      users: userFilter === 'all' ? undefined : userFilter,
+      sort: nextSort,
+      dir: sort === nextSort && direction === 'asc' ? 'desc' : 'asc',
     });
 
   return (
-    <>
-      <SiteHeader />
-      <main className="wrap pt-6 pb-16 space-y-6">
+    <AdminShell mainClassName="wrap pt-6 pb-16 space-y-6">
         <h1 className="text-2xl font-extrabold tracking-tight">Admin — Users</h1>
 
         <div className="grid gap-3 sm:grid-cols-5">
@@ -81,7 +91,11 @@ export default async function AdminUsersPage({ searchParams }) {
               {USER_FILTERS.map((f) => (
                 <a
                   key={f.value}
-                  href={adminHref('/admin/users', { viaToken, key }, { users: f.value === 'all' ? undefined : f.value })}
+                  href={adminHref('/admin/users', { viaToken, key }, {
+                    users: f.value === 'all' ? undefined : f.value,
+                    sort,
+                    dir: direction,
+                  })}
                   className={`rounded-full px-3 py-1 text-xs font-bold ${
                     userFilter === f.value ? 'bg-ink text-white' : 'text-muted'
                   }`}
@@ -95,14 +109,14 @@ export default async function AdminUsersPage({ searchParams }) {
           <table className="data-table mt-3 w-full text-sm">
             <thead>
               <tr className="text-left border-b-2 border-ink">
-                <th className="py-2">Status</th>
-                <th className="py-2">Name / Email</th>
-                <th className="py-2">Sign-in</th>
-                <th className="py-2 text-right">Tests</th>
-                <th className="py-2 text-right">Responses</th>
-                <th className="py-2 text-right">Spent</th>
-                <th className="py-2">Joined</th>
-                <th className="py-2">Last login</th>
+                <AdminSortHeader active={sort === 'access'} direction={direction} href={sortHref('access')}>Status</AdminSortHeader>
+                <AdminSortHeader active={sort === 'name'} direction={direction} href={sortHref('name')}>Name / Email</AdminSortHeader>
+                <AdminSortHeader active={sort === 'provider'} direction={direction} href={sortHref('provider')}>Sign-in</AdminSortHeader>
+                <AdminSortHeader className="text-right" active={sort === 'tests'} direction={direction} href={sortHref('tests')}>Tests</AdminSortHeader>
+                <AdminSortHeader className="text-right" active={sort === 'responses'} direction={direction} href={sortHref('responses')}>Responses</AdminSortHeader>
+                <AdminSortHeader className="text-right" active={sort === 'spent'} direction={direction} href={sortHref('spent')}>Spent</AdminSortHeader>
+                <AdminSortHeader active={sort === 'joined'} direction={direction} href={sortHref('joined')}>Joined</AdminSortHeader>
+                <AdminSortHeader active={sort === 'login'} direction={direction} href={sortHref('login')}>Last login</AdminSortHeader>
               </tr>
             </thead>
             <tbody>
@@ -145,8 +159,6 @@ export default async function AdminUsersPage({ searchParams }) {
           <p className="hint mt-2">⚠️ unverified = email captured at test creation but never confirmed by a real login.</p>
           <AdminPagination page={page} totalPages={totalPages} total={totalUsers} pageSize={PAGE_SIZE} buildHref={pageHref} />
         </div>
-      </main>
-      <SiteFooter />
-    </>
+    </AdminShell>
   );
 }

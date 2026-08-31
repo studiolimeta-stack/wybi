@@ -1,12 +1,10 @@
 import Link from 'next/link';
-import { SiteHeader, SiteFooter } from './SiteChrome.js';
+import { AdminShell } from './AdminShell.js';
 
 /** Shared by every /admin/* page — one copy of the login/denied screen instead of four that could drift. */
 export function AdminDenied({ user }) {
   return (
-    <>
-      <SiteHeader />
-      <main className="wrap pt-6 pb-16">
+    <AdminShell>
         <h1 className="text-2xl font-extrabold tracking-tight">Admin</h1>
         {user ? (
           <p className="mt-2 text-muted">
@@ -20,8 +18,6 @@ export function AdminDenied({ user }) {
             </Link>
           </>
         )}
-      </main>
-      <SiteFooter />
-    </>
+    </AdminShell>
   );
 }

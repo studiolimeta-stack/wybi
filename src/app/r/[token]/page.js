@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Eye } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { SiteHeader, SiteFooter } from '../../../components/SiteChrome.js';
 import { CheckIcon } from '../../../components/CheckIcon.js';
@@ -211,14 +211,15 @@ export default async function ResultsPage({ params }) {
             * chevron icon) to pair with it — a fade alone will not read as
             * discoverable against this palette no matter how it's tuned. */}
           <div className="flex w-full flex-wrap items-center gap-2 pt-2 pb-3 sm:w-auto sm:flex-nowrap sm:pt-0 sm:pb-0">
+            <ShareTestButton shareUrl={shareUrl} title={test.title} />
             <Link
               href={`/t/${test.slug}`}
               target="_blank"
               className="btn btn-plain shrink-0 px-3 py-2 text-sm sm:px-4"
             >
+              <Eye className="h-4 w-4" aria-hidden="true" />
               View respondent page
             </Link>
-            <ShareTestButton shareUrl={shareUrl} title={test.title} />
             <ManageTestMenu token={test.creator_token} status={test.status} locked={locked} />
           </div>
         </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Share2 } from 'lucide-react';
 import { ShareBox } from '../../../components/ShareBox.js';
 
 /**
@@ -29,6 +30,7 @@ export function ShareTestButton({ shareUrl, title }) {
   return (
     <>
       <button type="button" className="btn btn-plain shrink-0 px-3 py-2 text-sm sm:px-4" onClick={() => setOpen(true)}>
+        <Share2 className="h-4 w-4" aria-hidden="true" />
         Share this test
       </button>
 

@@ -44,12 +44,29 @@ function userFilterWhere(filter) {
     : '';
 }
 
+/** `sort` only ever selects an entry from one of the maps below — never raw SQL from a URL. */
+function orderBy(sortMap, sort, direction, fallback, tieBreak) {
+  const column = sortMap[sort] || sortMap[fallback];
+  const order = direction === 'asc' ? 'ASC' : 'DESC';
+  return `ORDER BY ${column} ${order} NULLS LAST, ${tieBreak} DESC`;
+}
+
 /**
  * `filter`: 'all' | 'paid' | 'free'. Filtering happens in SQL rather than by
  * slicing the array in the page component — a `LIMIT`/`OFFSET` applied after
  * an in-memory filter would silently under-count and mispaginate.
  */
-export async function listUsersForAdmin({ limit = 100, offset = 0, filter = 'all' } = {}) {
+export async function listUsersForAdmin({ limit = 100, offset = 0, filter = 'all', sort = 'joined', direction = 'desc' } = {}) {
+  const ordering = orderBy({
+    access: 'paid_test_count',
+    name: 'COALESCE(u.name, u.email)',
+    provider: 'providers',
+    tests: 'test_count',
+    responses: 'response_count',
+    spent: 'total_paid',
+    joined: 'u.created_at',
+    login: 'u.last_login_at',
+  }, sort, direction, 'joined', 'u.id');
   const { rows } = await query(
     `SELECT u.id, u.email, u.name, u.email_verified_at, u.created_at, u.last_login_at, u.banned_at,
             (SELECT COUNT(*)::int FROM tests t WHERE t.user_id = u.id AND t.status <> 'archived')
@@ -70,7 +87,7 @@ export async function listUsersForAdmin({ limit = 100, offset = 0, filter = 'all
               AS providers
      FROM users u
      ${userFilterWhere(filter)}
-     ORDER BY u.created_at DESC
+     ${ordering}
      LIMIT $1 OFFSET $2`,
     [limit, offset],
   );
@@ -107,7 +124,14 @@ export async function getUserForAdmin(id) {
  * creator's own /dashboard and deliberately hides those. An admin looking up
  * an account wants the full history, not just what the owner currently sees.
  */
-export async function listTestsForUserAdmin(userId) {
+export async function listTestsForUserAdmin(userId, { sort = 'created', direction = 'desc' } = {}) {
+  const ordering = orderBy({
+    title: 't.title',
+    status: 't.status',
+    responses: 'response_count',
+    prices: 'variant_count',
+    created: 't.created_at',
+  }, sort, direction, 'created', 't.id');
   const { rows } = await query(
     `SELECT t.id, t.slug, t.title, t.status, t.is_paid, t.currency, t.created_at,
             t.reported_count, t.creator_token,
@@ -115,18 +139,25 @@ export async function listTestsForUserAdmin(userId) {
             (SELECT COUNT(*)::int FROM price_variants pv WHERE pv.test_id = t.id) AS variant_count
      FROM tests t
      WHERE t.user_id = $1
-     ORDER BY t.created_at DESC`,
+     ${ordering}`,
     [userId],
   );
   return rows;
 }
 
 /** The `/admin/tests` table — every test, newest first, with its own response count. */
-export async function listRecentTestsForAdmin({ limit = 40, offset = 0 } = {}) {
+export async function listRecentTestsForAdmin({ limit = 40, offset = 0, sort = 'created', direction = 'desc' } = {}) {
+  const ordering = orderBy({
+    title: 't.title',
+    responses: 'response_count',
+    status: 't.status',
+    reports: 't.reported_count',
+    created: 't.created_at',
+  }, sort, direction, 'created', 't.id');
   const { rows } = await query(
     `SELECT t.id, t.slug, t.title, t.status, t.is_paid, t.created_at, t.reported_count, t.creator_token,
             (SELECT COUNT(*)::int FROM responses r WHERE r.test_id = t.id) AS response_count
-     FROM tests t ORDER BY t.created_at DESC LIMIT $1 OFFSET $2`,
+     FROM tests t ${ordering} LIMIT $1 OFFSET $2`,
     [limit, offset],
   );
   return rows;
@@ -150,7 +181,17 @@ export async function getUserSummary() {
   return rows[0];
 }
 
-export async function listPaymentsForAdmin({ limit = 100, offset = 0 } = {}) {
+export async function listPaymentsForAdmin({ limit = 100, offset = 0, sort = 'created', direction = 'desc' } = {}) {
+  const ordering = orderBy({
+    test: 't.title',
+    user: 'u.email',
+    provider: 'p.provider',
+    amount: 'p.amount',
+    fee: 'p.fee',
+    net: 'p.earnings',
+    status: 'p.status',
+    created: 'p.created_at',
+  }, sort, direction, 'created', 'p.id');
   const { rows } = await query(
     `SELECT p.id, p.provider, p.provider_payment_id, p.amount, p.currency, p.status, p.created_at,
             p.fee, p.earnings,
@@ -159,7 +200,7 @@ export async function listPaymentsForAdmin({ limit = 100, offset = 0 } = {}) {
      FROM payments p
      LEFT JOIN users u ON u.id = p.user_id
      LEFT JOIN tests t ON t.id = p.test_id
-     ORDER BY p.created_at DESC
+     ${ordering}
      LIMIT $1 OFFSET $2`,
     [limit, offset],
   );

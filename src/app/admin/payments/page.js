@@ -1,6 +1,7 @@
-import { SiteHeader, SiteFooter } from '../../../components/SiteChrome.js';
+import { AdminShell } from '../../../components/AdminShell.js';
 import { AdminDenied } from '../../../components/AdminDenied.js';
 import { AdminPagination } from '../../../components/AdminPagination.js';
+import { AdminSortHeader } from '../../../components/AdminSortHeader.js';
 import { formatPrice } from '../../../lib/config.js';
 import { listPaymentsForAdmin, countPaymentsForAdmin, getPaymentSummary } from '../../../lib/admin.js';
 import { checkAdminAccess, adminHref } from '../../../lib/adminAuth.js';
@@ -10,13 +11,17 @@ export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Admin — payments', robots: { index: false, follow: false } };
 
 const PAGE_SIZE = 15;
+const PAYMENT_SORT_KEYS = new Set(['test', 'user', 'provider', 'amount', 'fee', 'net', 'status', 'created']);
 
 export default async function AdminPaymentsPage({ searchParams }) {
-  const { key, page: pageParam } = await searchParams;
+  const { key, page: pageParam, sort: sortParam, dir: dirParam } = await searchParams;
   const user = await currentUser();
   const { authorized, viaToken } = checkAdminAccess({ key, user });
 
   if (!authorized) return <AdminDenied user={user} />;
+
+  const sort = PAYMENT_SORT_KEYS.has(sortParam) ? sortParam : 'created';
+  const direction = dirParam === 'asc' ? 'asc' : 'desc';
 
   // Count first, clamp the requested page into range, THEN fetch that page's
   // rows — same order as /admin/users and for the same reason: a stale or
@@ -26,10 +31,15 @@ export default async function AdminPaymentsPage({ searchParams }) {
   const requestedPage = Number.parseInt(pageParam, 10);
   const page = Number.isFinite(requestedPage) ? Math.min(Math.max(1, requestedPage), totalPages) : 1;
 
-  const payments = await listPaymentsForAdmin({ limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE });
+  const payments = await listPaymentsForAdmin({ limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE, sort, direction });
 
   const pageHref = (targetPage) =>
-    adminHref('/admin/payments', { viaToken, key }, { page: targetPage > 1 ? targetPage : undefined });
+    adminHref('/admin/payments', { viaToken, key }, { sort, dir: direction, page: targetPage > 1 ? targetPage : undefined });
+  const sortHref = (nextSort) =>
+    adminHref('/admin/payments', { viaToken, key }, {
+      sort: nextSort,
+      dir: sort === nextSort && direction === 'asc' ? 'desc' : 'asc',
+    });
 
   // Every money stat is broken down by currency, never summed across them —
   // same discipline as the table itself: `$14.90 + €14.90` joined as text is
@@ -62,9 +72,7 @@ export default async function AdminPaymentsPage({ searchParams }) {
   ];
 
   return (
-    <>
-      <SiteHeader />
-      <main className="wrap pt-6 pb-16 space-y-6">
+    <AdminShell mainClassName="wrap pt-6 pb-16 space-y-6">
         <h1 className="text-2xl font-extrabold tracking-tight">Admin — Payments</h1>
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -95,14 +103,14 @@ export default async function AdminPaymentsPage({ searchParams }) {
           <table className="data-table mt-3 w-full text-sm">
             <thead>
               <tr className="text-left border-b-2 border-ink">
-                <th className="py-2">Test</th>
-                <th className="py-2">User</th>
-                <th className="py-2">Provider</th>
-                <th className="py-2 text-right">Amount</th>
-                <th className="py-2 text-right">Fee</th>
-                <th className="py-2 text-right">Net</th>
-                <th className="py-2">Status</th>
-                <th className="py-2">Date</th>
+                <AdminSortHeader active={sort === 'test'} direction={direction} href={sortHref('test')}>Test</AdminSortHeader>
+                <AdminSortHeader active={sort === 'user'} direction={direction} href={sortHref('user')}>User</AdminSortHeader>
+                <AdminSortHeader active={sort === 'provider'} direction={direction} href={sortHref('provider')}>Provider</AdminSortHeader>
+                <AdminSortHeader className="text-right" active={sort === 'amount'} direction={direction} href={sortHref('amount')}>Amount</AdminSortHeader>
+                <AdminSortHeader className="text-right" active={sort === 'fee'} direction={direction} href={sortHref('fee')}>Fee</AdminSortHeader>
+                <AdminSortHeader className="text-right" active={sort === 'net'} direction={direction} href={sortHref('net')}>Net</AdminSortHeader>
+                <AdminSortHeader active={sort === 'status'} direction={direction} href={sortHref('status')}>Status</AdminSortHeader>
+                <AdminSortHeader active={sort === 'created'} direction={direction} href={sortHref('created')}>Date</AdminSortHeader>
               </tr>
             </thead>
             <tbody>
@@ -152,8 +160,6 @@ export default async function AdminPaymentsPage({ searchParams }) {
             refresh
           </a>
         </p>
-      </main>
-      <SiteFooter />
-    </>
+    </AdminShell>
   );
 }

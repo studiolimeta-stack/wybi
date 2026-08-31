@@ -6,13 +6,9 @@ import { ProductImageGallery } from './ProductImageGallery.js';
  * The offer as a respondent sees it. Deliberately one component so the
  * homepage demo, the live respondent page and the preview can never drift apart.
  *
- * Deliberately does NOT render `test.product_url` ("Learn more") itself — it
- * used to, unconditionally, which put an untracked exit link in front of a
- * respondent before they'd answered (decision 9: nothing on this page should
- * pull someone away pre-answer). Callers that want it render `<ProductLink>`
- * (src/components/ProductLink.js) themselves, gated to a post-answer state —
- * see RespondFlow's `done` step and the "already answered" branch of
- * t/[slug]/page.js.
+ * Deliberately does NOT render `test.product_url`. A respondent page is a
+ * measurement instrument, not a route into the offer, so it never gives the
+ * creator an external link that can distract from — or follow — a response.
  */
 export function OfferCard({ test, price, showPrice = true, priceExtra, children, className = '', titleClassName = '' }) {
   const storedImages = Array.isArray(test.image_urls) ? test.image_urls : [];

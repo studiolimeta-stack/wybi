@@ -36,10 +36,10 @@ export function DeleteTestButton({ token }) {
       onClick={remove}
       aria-label="Delete this test"
       title="Delete this test"
-      className="inline-flex items-center gap-1 text-alert underline disabled:opacity-50"
+      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-alert hover:bg-red-50 disabled:opacity-50"
     >
-      <Trash2 className="h-3.5 w-3.5" />
-      {busy ? 'Deleting…' : 'delete'}
+      <Trash2 className="h-4 w-4" aria-hidden="true" />
+      <span className="sr-only">{busy ? 'Deleting…' : 'Delete this test'}</span>
     </button>
   );
 }

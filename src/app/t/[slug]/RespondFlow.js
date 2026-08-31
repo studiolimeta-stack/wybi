@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { OfferCard } from '../../../components/OfferCard.js';
-import { ProductLink } from '../../../components/ProductLink.js';
 import { TrackedLink } from '../../../components/Track.js';
 
 const CONFIDENCE_OPTIONS = [
@@ -223,9 +222,6 @@ export function RespondFlow({ test, price, slug, currencySymbol, askConfidence, 
                 <p className="hint mt-1">
                   {answer === 'yes' ? 'The creator sees the number, never your name.' : 'Honest answers are the useful ones.'}
                 </p>
-                {/* Only reachable post-answer — see OfferCard's docstring for why
-                  * this isn't rendered up in the "ask" step any more. */}
-                <ProductLink url={test.product_url} slug={slug} className="mt-3 inline-block text-sm font-semibold underline" />
               </div>
             )}
           </>

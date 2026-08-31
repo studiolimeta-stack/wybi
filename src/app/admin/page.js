@@ -1,4 +1,4 @@
-import { SiteHeader, SiteFooter } from '../../components/SiteChrome.js';
+import { AdminShell } from '../../components/AdminShell.js';
 import { AdminDenied } from '../../components/AdminDenied.js';
 import { Meter } from '../../components/ResultsBlocks.js';
 import { config } from '../../lib/config.js';
@@ -139,9 +139,7 @@ export default async function AdminOverviewPage({ searchParams }) {
   const onlineNowQuery = viaToken ? `?key=${encodeURIComponent(key)}` : '';
 
   return (
-    <>
-      <SiteHeader />
-      <main className="wrap pt-6 pb-16 space-y-6">
+    <AdminShell mainClassName="wrap pt-6 pb-16 space-y-6">
         <h1 className="text-2xl font-extrabold tracking-tight">Admin</h1>
 
         <div className="grid gap-3 sm:grid-cols-4">
@@ -257,8 +255,6 @@ export default async function AdminOverviewPage({ searchParams }) {
             refresh
           </a>
         </p>
-      </main>
-      <SiteFooter />
-    </>
+    </AdminShell>
   );
 }

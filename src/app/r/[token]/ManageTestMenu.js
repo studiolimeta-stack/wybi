@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
-import { Pause, Play, Download, Trash2 } from 'lucide-react';
+import { Pause, Play, Download, Settings, Trash2 } from 'lucide-react';
 
 const menuItem =
   'flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-semibold hover:bg-locked';
@@ -99,11 +99,13 @@ export function ManageTestMenu({ token, status, locked }) {
         ref={buttonRef}
         type="button"
         onClick={() => setOpen((v) => !v)}
+        aria-label="Settings"
+        title="Settings"
         aria-haspopup="menu"
         aria-expanded={open}
-        className="btn btn-plain shrink-0 px-3 py-2 text-sm sm:px-4"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-ink hover:bg-locked focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
       >
-        Manage this test
+        <Settings className="h-5 w-5" aria-hidden="true" />
       </button>
 
       {open &&

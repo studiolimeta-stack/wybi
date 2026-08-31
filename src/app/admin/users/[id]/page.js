@@ -1,15 +1,17 @@
 import Link from 'next/link';
-import { SiteHeader, SiteFooter } from '../../../../components/SiteChrome.js';
+import { AdminShell } from '../../../../components/AdminShell.js';
 import { AdminDenied } from '../../../../components/AdminDenied.js';
+import { AdminSortHeader } from '../../../../components/AdminSortHeader.js';
 import { formatPrice } from '../../../../lib/config.js';
 import { getUserForAdmin, listTestsForUserAdmin } from '../../../../lib/admin.js';
-import { checkAdminAccess } from '../../../../lib/adminAuth.js';
+import { checkAdminAccess, adminHref } from '../../../../lib/adminAuth.js';
 import { currentUser } from '../../../../lib/session.js';
 import { BanUserButton } from './BanUserButton.js';
 import { DeleteTestButton } from '../../../../components/DeleteTestButton.js';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Admin — user', robots: { index: false, follow: false } };
+const USER_TEST_SORT_KEYS = new Set(['title', 'status', 'responses', 'prices', 'created']);
 
 /**
  * Account detail behind the user row on /admin. Deliberately does NOT
@@ -26,36 +28,38 @@ export const metadata = { title: 'Admin — user', robots: { index: false, follo
  */
 export default async function AdminUserPage({ params, searchParams }) {
   const { id } = await params;
-  const { key } = await searchParams;
+  const { key, sort: sortParam, dir: dirParam } = await searchParams;
   const adminUser = await currentUser();
   const { authorized, viaToken } = checkAdminAccess({ key, user: adminUser });
 
   if (!authorized) return <AdminDenied user={adminUser} />;
+
+  const sort = USER_TEST_SORT_KEYS.has(sortParam) ? sortParam : 'created';
+  const direction = dirParam === 'asc' ? 'asc' : 'desc';
 
   const backHref = viaToken ? `/admin/users?key=${encodeURIComponent(key)}` : '/admin/users';
   const target = await getUserForAdmin(id);
 
   if (!target) {
     return (
-      <>
-        <SiteHeader />
-        <main className="wrap pt-6 pb-16">
+      <AdminShell>
           <Link href={backHref} className="hint underline">
             ← Back to users
           </Link>
           <p className="mt-4 text-muted">No user with id {id}.</p>
-        </main>
-        <SiteFooter />
-      </>
+      </AdminShell>
     );
   }
 
-  const tests = await listTestsForUserAdmin(id);
+  const tests = await listTestsForUserAdmin(id, { sort, direction });
+  const sortHref = (nextSort) =>
+    adminHref(`/admin/users/${id}`, { viaToken, key }, {
+      sort: nextSort,
+      dir: sort === nextSort && direction === 'asc' ? 'desc' : 'asc',
+    });
 
   return (
-    <>
-      <SiteHeader />
-      <main className="wrap pt-6 pb-16 space-y-6">
+    <AdminShell mainClassName="wrap pt-6 pb-16 space-y-6">
         <Link href={backHref} className="hint underline">
           ← Back to users
         </Link>
@@ -87,11 +91,11 @@ export default async function AdminUserPage({ params, searchParams }) {
             <table className="data-table mt-3 w-full text-sm">
               <thead>
                 <tr className="text-left border-b-2 border-ink">
-                  <th className="py-2">Title</th>
-                  <th className="py-2">Status</th>
-                  <th className="py-2 text-right">Resp.</th>
-                  <th className="py-2 text-right">Prices</th>
-                  <th className="py-2">Created</th>
+                  <AdminSortHeader active={sort === 'title'} direction={direction} href={sortHref('title')}>Title</AdminSortHeader>
+                  <AdminSortHeader active={sort === 'status'} direction={direction} href={sortHref('status')}>Status</AdminSortHeader>
+                  <AdminSortHeader className="text-right" active={sort === 'responses'} direction={direction} href={sortHref('responses')}>Resp.</AdminSortHeader>
+                  <AdminSortHeader className="text-right" active={sort === 'prices'} direction={direction} href={sortHref('prices')}>Prices</AdminSortHeader>
+                  <AdminSortHeader active={sort === 'created'} direction={direction} href={sortHref('created')}>Created</AdminSortHeader>
                   <th className="py-2">Links</th>
                   <th className="py-2">Actions</th>
                 </tr>
@@ -132,8 +136,6 @@ export default async function AdminUserPage({ params, searchParams }) {
           &quot;results (as them)&quot; opens the exact page this creator sees — same URL they'd bookmark, no
           impersonation needed. Delete a test directly above, or open its results link to pause or export it.
         </p>
-      </main>
-      <SiteFooter />
-    </>
+    </AdminShell>
   );
 }

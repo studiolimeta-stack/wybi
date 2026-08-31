@@ -151,6 +151,21 @@ export function PreviewModal({ offer, price, askConfidence, askSuggestedPrice, o
                   <p className="hint mt-1">
                     {answer === 'yes' ? 'The creator sees the number, never your name.' : 'Honest answers are the useful ones.'}
                   </p>
+                  {/* Mirrors RespondFlow's post-answer placement (see OfferCard's
+                    * docstring) — but a plain <a>, not <ProductLink>, on purpose:
+                    * Preview must never fire a network call (decision 26, "nothing
+                    * here is written anywhere"), and ProductLink's TrackedLink
+                    * always POSTs to /api/events. */}
+                  {offer.product_url && (
+                    <a
+                      href={offer.product_url}
+                      target="_blank"
+                      rel="noopener noreferrer nofollow ugc"
+                      className="mt-3 inline-block text-sm font-semibold underline"
+                    >
+                      Learn more
+                    </a>
+                  )}
                 </div>
               )}
             </>

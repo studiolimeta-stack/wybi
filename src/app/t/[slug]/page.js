@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import Script from 'next/script';
 import { OfferCard } from '../../../components/OfferCard.js';
+import { ProductLink } from '../../../components/ProductLink.js';
 import { SiteFooter } from '../../../components/SiteChrome.js';
 import { RespondFlow } from './RespondFlow.js';
 import { getTestBySlug, assignPriceVariant, getExistingResponse } from '../../../lib/tests.js';
@@ -86,6 +87,9 @@ export default async function RespondentPage({ params }) {
               <Link href={`/create?ref=${encodeURIComponent(test.slug)}`} className="btn btn-primary mt-5 w-full sm:w-auto">
                 Test your own product
               </Link>
+              {/* Already answered on a previous visit — a genuine post-answer
+                * state, same as RespondFlow's `done` step. */}
+              <ProductLink url={test.product_url} slug={test.slug} className="mt-4 inline-block text-sm font-semibold underline" />
             </div>
           </OfferCard>
         ) : (

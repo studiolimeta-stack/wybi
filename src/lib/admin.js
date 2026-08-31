@@ -123,6 +123,7 @@ export async function getUserSummary() {
 export async function listPaymentsForAdmin({ limit = 100 } = {}) {
   const { rows } = await query(
     `SELECT p.id, p.provider, p.provider_payment_id, p.amount, p.currency, p.status, p.created_at,
+            p.fee, p.earnings,
             u.email AS user_email,
             t.title AS test_title, t.slug AS test_slug, t.creator_token
      FROM payments p
@@ -141,18 +142,34 @@ export async function listPaymentsForAdmin({ limit = 100 } = {}) {
  * `SUM(amount)` across a mixed-currency table produces a figure that looks
  * authoritative and means nothing — $14.90 + ¥14.90 is not 29.80 of anything.
  * The headline count stays global; only the money is split.
+ *
+ * `earningsTotals` is Paddle's own reported "what you actually keep after
+ * their fee", summed the same way — the closest honest substitute for an
+ * account balance this app can show, since Paddle's Billing API has no
+ * balance/payout endpoint at all (checked directly: 404, not a permissions
+ * gate). Only ever sums real Paddle transactions: `fee`/`earnings` are NULL
+ * for every `dev_mock` row and for real payments recorded before this column
+ * existed, and SUM() over Postgres already ignores NULLs correctly — no
+ * COALESCE needed, and none added, so a currency with zero known earnings
+ * stays absent from the list rather than rendering a misleading $0.
  */
 export async function getPaymentSummary() {
-  const [totals, counts] = await Promise.all([
+  const [totals, earningsTotals, counts] = await Promise.all([
     query(`
       SELECT currency, COALESCE(SUM(amount), 0) AS total
       FROM payments WHERE status = 'succeeded'
       GROUP BY currency ORDER BY total DESC`),
     query(`
+      SELECT currency, SUM(earnings) AS total, COUNT(earnings)::int AS known_count
+      FROM payments WHERE status = 'succeeded' AND provider = 'paddle'
+      GROUP BY currency HAVING SUM(earnings) IS NOT NULL ORDER BY total DESC`),
+    query(`
       SELECT COUNT(*) FILTER (WHERE status = 'succeeded')::int AS succeeded_count,
-             COUNT(*) FILTER (WHERE provider = 'dev_mock' AND status = 'succeeded')::int AS mock_count
+             COUNT(*) FILTER (WHERE provider = 'dev_mock' AND status = 'succeeded')::int AS mock_count,
+             COUNT(*) FILTER (WHERE provider = 'paddle' AND status = 'succeeded' AND earnings IS NULL)::int
+               AS paddle_missing_earnings_count
       FROM payments`),
   ]);
 
-  return { ...counts.rows[0], totals: totals.rows };
+  return { ...counts.rows[0], totals: totals.rows, earningsTotals: earningsTotals.rows };
 }

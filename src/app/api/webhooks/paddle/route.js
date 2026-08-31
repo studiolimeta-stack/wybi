@@ -60,13 +60,20 @@ export async function POST(request) {
     // delivery, or the same transaction firing more than once) — both are
     // silent no-ops, not errors: Paddle should not retry-storm us for either.
     if (test && !test.is_paid) {
-      const totalMinorUnits = data.details?.totals?.total; // e.g. "1490" for $14.90
+      const totals = data.details?.totals || {};
+      // Same object, same minor-units-to-decimal conversion as `total` below —
+      // Paddle already sends these on every transaction.completed payload,
+      // this just stops discarding them. Both null if Paddle ever omits them
+      // (payload shape isn't a stable contract to build a hard requirement on).
+      const toDecimal = (minorUnits) => (minorUnits != null ? Number(minorUnits) / 100 : null);
       await recordPaddlePayment({
         testId: test.id,
         userId: test.user_id,
         transactionId: data.id,
-        amount: totalMinorUnits != null ? Number(totalMinorUnits) / 100 : config.unlockPrice,
+        amount: toDecimal(totals.total) ?? config.unlockPrice,
         currency: data.currency_code || config.unlockCurrency,
+        fee: toDecimal(totals.fee),
+        earnings: toDecimal(totals.earnings),
       });
       await track('report_unlocked', { testId: test.id, props: { mock: false } });
 

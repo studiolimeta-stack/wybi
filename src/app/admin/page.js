@@ -318,7 +318,29 @@ export default async function AdminPage({ searchParams }) {
           {data.paymentSummary.totals.length
             ? data.paymentSummary.totals.map((t) => formatPrice(t.total, t.currency)).join(' + ')
             : '—'}{' '}
-          total. <code>provider = &apos;dev_mock&apos;</code> rows are simulated unlocks, not real revenue.
+          gross. <code>provider = &apos;dev_mock&apos;</code> rows are simulated unlocks, not real revenue.
+        </p>
+        {/* Paddle's own fee/earnings breakdown, summed. This is the closest
+          * honest substitute for "account balance" this app can show — Paddle's
+          * Billing API has no balance/payout endpoint at all (checked directly:
+          * 404, not a permissions gate), so there is no single authoritative
+          * number to fetch. This is a derived total from real transactions,
+          * not Paddle's own ledger — it won't reflect refunds/adjustments,
+          * which this API key also can't currently read (403 on /adjustments). */}
+        <p className="hint mt-1">
+          {data.paymentSummary.earningsTotals.length ? (
+            <>
+              You keep{' '}
+              {data.paymentSummary.earningsTotals.map((t) => formatPrice(t.total, t.currency)).join(' + ')} after
+              Paddle&apos;s fees, across {data.paymentSummary.earningsTotals.reduce((sum, t) => sum + t.known_count, 0)}{' '}
+              real transaction{data.paymentSummary.earningsTotals.reduce((sum, t) => sum + t.known_count, 0) === 1 ? '' : 's'}.
+            </>
+          ) : (
+            'No fee/earnings data yet — populated from Paddle on each new real transaction.'
+          )}
+          {data.paymentSummary.paddle_missing_earnings_count > 0 && (
+            <> {data.paymentSummary.paddle_missing_earnings_count} earlier real transaction{data.paymentSummary.paddle_missing_earnings_count === 1 ? '' : 's'} predate this and {data.paymentSummary.paddle_missing_earnings_count === 1 ? 'is' : 'are'} not counted.</>
+          )}
         </p>
         <table className="data-table mt-3 w-full text-sm">
           <thead>
@@ -327,6 +349,8 @@ export default async function AdminPage({ searchParams }) {
               <th className="py-2">User</th>
               <th className="py-2">Provider</th>
               <th className="py-2 text-right">Amount</th>
+              <th className="py-2 text-right">Fee</th>
+              <th className="py-2 text-right">Net</th>
               <th className="py-2">Status</th>
               <th className="py-2">Date</th>
             </tr>
@@ -334,7 +358,7 @@ export default async function AdminPage({ searchParams }) {
           <tbody>
             {data.payments.length === 0 && (
               <tr>
-                <td className="py-3 text-muted" colSpan={6}>
+                <td className="py-3 text-muted" colSpan={8}>
                   No payments yet.
                 </td>
               </tr>
@@ -357,6 +381,12 @@ export default async function AdminPage({ searchParams }) {
                   </span>
                 </td>
                 <td className="py-2 text-right tabular-nums">{formatPrice(p.amount, p.currency)}</td>
+                <td className="py-2 text-right tabular-nums text-muted">
+                  {p.fee != null ? formatPrice(p.fee, p.currency) : '—'}
+                </td>
+                <td className="py-2 text-right tabular-nums font-bold">
+                  {p.earnings != null ? formatPrice(p.earnings, p.currency) : '—'}
+                </td>
                 <td className="py-2">{p.status}</td>
                 <td className="py-2">{new Date(p.created_at).toLocaleDateString()}</td>
               </tr>

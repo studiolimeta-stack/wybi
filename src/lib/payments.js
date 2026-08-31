@@ -36,13 +36,18 @@ export async function recordMockPayment({ testId, userId }) {
  * responsible for verifying the webhook signature and checking
  * `!test.is_paid` before calling this, so a retried webhook delivery is a
  * harmless no-op rather than a duplicate charge record.
+ *
+ * `fee`/`earnings` are Paddle's own breakdown — what Paddle keeps and what
+ * you actually keep, in the same currency/units as `amount`. Both optional:
+ * the webhook payload carries them today, but this must not become a hard
+ * requirement a future payload shape could silently break.
  */
-export async function recordPaddlePayment({ testId, userId, transactionId, amount, currency }) {
+export async function recordPaddlePayment({ testId, userId, transactionId, amount, currency, fee = null, earnings = null }) {
   await transaction(async (client) => {
     await client.query(
-      `INSERT INTO payments (user_id, test_id, provider, provider_payment_id, amount, currency, status)
-       VALUES ($1, $2, 'paddle', $3, $4, $5, 'succeeded')`,
-      [userId, testId, transactionId, amount, currency],
+      `INSERT INTO payments (user_id, test_id, provider, provider_payment_id, amount, currency, status, fee, earnings)
+       VALUES ($1, $2, 'paddle', $3, $4, $5, 'succeeded', $6, $7)`,
+      [userId, testId, transactionId, amount, currency, fee, earnings],
     );
     await client.query('UPDATE tests SET is_paid = true, updated_at = now() WHERE id = $1', [testId]);
   });

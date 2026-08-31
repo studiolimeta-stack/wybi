@@ -53,10 +53,7 @@ export const config = {
   rateLimits: {
     respond: [150, 3600],
     createTest: [10, 3600],
-    // TEMP (2026-08-26): raised from 20/hour to effectively unlimited for active
-    // create-form testing. MUST be reverted to [20, 3600] before real launch —
-    // see Development Guidelines "Outstanding / To revert" note.
-    upload: [1_000_000, 3600],
+    upload: [20, 3600],
     events: [400, 3600],
     // Deliberately tighter than the others — this bucket gates account creation
     // and password-less login, so it protects an inbox/identity, not a vote.

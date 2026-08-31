@@ -63,7 +63,7 @@ const CONVERSION_COPY = {
  * number here is framed around what changed since the free snapshot, never
  * around what's being withheld.
  */
-function Paywall({ test, totalResponses, newResponses, recommendation, freeRecommendation, token }) {
+function Paywall({ test, totalResponses, newResponses, recommendation, freeRecommendation, token, customerEmail }) {
   const state = compareRecommendations(freeRecommendation, recommendation);
   const { headline: stateHeadline, body: stateBody } = CONVERSION_COPY[state];
 
@@ -101,7 +101,11 @@ function Paywall({ test, totalResponses, newResponses, recommendation, freeRecom
 
       <UnlockButton
         token={token}
-        stripeEnabled={config.stripe.enabled}
+        paddleEnabled={config.paddle.enabled}
+        paddleClientToken={config.paddle.clientToken}
+        paddleEnvironment={config.paddle.environment}
+        paddlePriceId={config.paddle.unlockPriceId}
+        customerEmail={customerEmail}
         price="$14.90"
         totalResponses={totalResponses}
       />
@@ -264,6 +268,7 @@ export default async function ResultsPage({ params }) {
                   recommendation={report.recommendation}
                   freeRecommendation={freeReport.recommendation}
                   token={test.creator_token}
+                  customerEmail={user?.email ?? null}
                 />
                 {/* Never `report.priceStats` on this branch. A locked report is
                   * withheld server-side — the numbers must not reach the HTML at
@@ -329,7 +334,11 @@ export default async function ResultsPage({ params }) {
                 <div className="card p-6 text-center">
                   <UnlockButton
                     token={test.creator_token}
-                    stripeEnabled={config.stripe.enabled}
+                    paddleEnabled={config.paddle.enabled}
+                    paddleClientToken={config.paddle.clientToken}
+                    paddleEnvironment={config.paddle.environment}
+                    paddlePriceId={config.paddle.unlockPriceId}
+                    customerEmail={user?.email ?? null}
                     price="$14.90"
                     totalResponses={responses.length}
                   />

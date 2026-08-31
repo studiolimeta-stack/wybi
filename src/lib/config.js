@@ -95,10 +95,31 @@ export const config = {
     from: process.env.EMAIL_FROM || null,
   },
 
-  stripe: {
-    enabled: Boolean(process.env.STRIPE_SECRET_KEY),
-    secretKey: process.env.STRIPE_SECRET_KEY || null,
-    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || null,
+  /**
+   * Paddle Billing — Merchant of Record for the $14.90 report unlock (decided
+   * 2026-08-26; see Development Guidelines → External Services → Payments).
+   * Checkout itself runs client-side via Paddle.js against `clientToken` +
+   * `unlockPriceId`; confirmation comes from the `transaction.completed`
+   * webhook at /api/webhooks/paddle, verified with `webhookSecret` — never
+   * from the client-side checkout.completed event alone. `apiKey` is not
+   * called anywhere yet (no server-initiated transactions or refunds today);
+   * it's captured now so a future admin refund action doesn't need a second
+   * credentials round trip.
+   */
+  paddle: {
+    enabled: Boolean(
+      process.env.PADDLE_API_KEY &&
+        process.env.PADDLE_CLIENT_TOKEN &&
+        process.env.PADDLE_WEBHOOK_SECRET &&
+        process.env.PADDLE_UNLOCK_PRICE_ID,
+    ),
+    // 'sandbox' | 'production' — must match which dashboard the other four
+    // values were generated in, or Paddle.js/webhook verification just fails.
+    environment: process.env.PADDLE_ENVIRONMENT || 'sandbox',
+    apiKey: process.env.PADDLE_API_KEY || null,
+    clientToken: process.env.PADDLE_CLIENT_TOKEN || null,
+    webhookSecret: process.env.PADDLE_WEBHOOK_SECRET || null,
+    unlockPriceId: process.env.PADDLE_UNLOCK_PRICE_ID || null,
   },
 
   /**

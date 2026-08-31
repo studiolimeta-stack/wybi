@@ -29,6 +29,26 @@ export async function recordMockPayment({ testId, userId }) {
 }
 
 /**
+ * Writes the real payment row once Paddle's `transaction.completed` webhook
+ * confirms a charge — same row shape and same `is_paid` flip as
+ * `recordMockPayment`, just `provider = 'paddle'` with Paddle's own
+ * transaction id for reconciliation. Caller (the webhook route) is
+ * responsible for verifying the webhook signature and checking
+ * `!test.is_paid` before calling this, so a retried webhook delivery is a
+ * harmless no-op rather than a duplicate charge record.
+ */
+export async function recordPaddlePayment({ testId, userId, transactionId, amount, currency }) {
+  await transaction(async (client) => {
+    await client.query(
+      `INSERT INTO payments (user_id, test_id, provider, provider_payment_id, amount, currency, status)
+       VALUES ($1, $2, 'paddle', $3, $4, $5, 'succeeded')`,
+      [userId, testId, transactionId, amount, currency],
+    );
+    await client.query('UPDATE tests SET is_paid = true, updated_at = now() WHERE id = $1', [testId]);
+  });
+}
+
+/**
  * Full payment history for the account page. Unlocks are per TEST, not a
  * subscription — there is no account-wide "paid" plan — so this is what "show
  * he's a paid user, with all the information" actually means here: every

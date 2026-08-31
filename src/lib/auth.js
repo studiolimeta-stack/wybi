@@ -43,7 +43,34 @@ export async function issueSessionToken(userId, { userAgent = null, ipHash = nul
   );
   await query('UPDATE users SET last_login_at = now() WHERE id = $1', [userId]);
 
+  pruneDeadAuthRowsSometimes();
+
   return token;
+}
+
+/**
+ * Data-retention prune for sessions/login_tokens (see Development Guidelines →
+ * Data retention). Both tables carry an ip_hash + user_agent that serve no
+ * purpose once the row is dead, so — same lazy pattern as
+ * lib/tests.js#checkRateLimit's rate_limit_hits prune — a small fraction of
+ * logins/link-sends deletes anything long past its useful life instead of
+ * needing a cron job. Login is the only write path shared by both tables.
+ * Windows are generous on purpose: this is cleanup of already-inert rows, not
+ * a security control (revocation/expiry checks already gate access above).
+ * Exported un-gated as pruneDeadAuthRows so scripts/test-auth.js can assert
+ * the DELETE's WHERE clause directly, without depending on the 1% roll.
+ */
+export async function pruneDeadAuthRows() {
+  await query(
+    `DELETE FROM sessions WHERE (revoked_at IS NOT NULL OR expires_at < now()) AND expires_at < now() - interval '30 days'`,
+  ).catch((err) => console.error(`session_prune_failed: ${err.message}`));
+  await query("DELETE FROM login_tokens WHERE created_at < now() - interval '30 days'").catch((err) =>
+    console.error(`login_token_prune_failed: ${err.message}`),
+  );
+}
+
+function pruneDeadAuthRowsSometimes() {
+  if (Math.random() < 0.01) pruneDeadAuthRows();
 }
 
 export async function lookupSession(token) {
@@ -201,6 +228,11 @@ export async function createLoginToken(email, { redirectTo = null, ipHash = null
      VALUES ($1, $2, $3, $4, now() + ($5 || ' minutes')::interval)`,
     [normaliseEmail(email), hashToken(token), redirectTo, ipHash, String(MAGIC_LINK_TTL_MINUTES)],
   );
+
+  // Requested-but-never-clicked magic links only ever hit this path, never
+  // issueSessionToken — prune here too or they'd sit unpruned forever.
+  pruneDeadAuthRowsSometimes();
+
   return token;
 }
 

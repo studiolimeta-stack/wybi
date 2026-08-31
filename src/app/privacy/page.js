@@ -4,7 +4,7 @@ import { LegalPage } from '../../components/LegalPage.js';
 
 export const metadata = { title: 'Privacy Policy — Would You Buy It?' };
 
-const UPDATED = 'August 29, 2026';
+const UPDATED = 'August 31, 2026';
 
 export default function PrivacyPage() {
   return (
@@ -125,6 +125,15 @@ export default function PrivacyPage() {
           ends every active session. Tests you created and payment records are retained after that (disassociated
           from your account) for accounting and product-integrity reasons, the same way a receipt outlives a closed
           store account.
+        </p>
+        <p>
+          Answers to a price test (and the anonymised traffic data behind stats like &ldquo;answer rate&rdquo;) are
+          kept for as long as the test itself exists, since they&apos;re what the creator&apos;s pricing report is
+          built from — that&apos;s the whole product. Deleting a test deletes its answers and traffic data with it,
+          immediately and permanently. Sign-in sessions and magic-link emails are single-purpose and short-lived by
+          design (a session expires after 30 days of inactivity, a login link after 15 minutes) and are automatically
+          erased from our database roughly a month after they stop being usable, whether or not you ever delete
+          your account.
         </p>
 
         <h2>Your choices</h2>

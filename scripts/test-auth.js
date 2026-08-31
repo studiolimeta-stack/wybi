@@ -13,6 +13,7 @@
  */
 import test, { after, before } from 'node:test';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import {
   findOrCreateUserByIdentity,
   createLoginToken,
@@ -20,6 +21,8 @@ import {
   claimTests,
   safeRedirect,
   normaliseEmail,
+  issueSessionToken,
+  pruneDeadAuthRows,
 } from '../src/lib/auth.js';
 import { createTest, listTestsByUserId } from '../src/lib/tests.js';
 import { query, pool } from '../src/lib/db.js';
@@ -135,6 +138,55 @@ test('an expired magic link is refused', async () => {
     [EMAIL],
   );
   assert.equal(await consumeLoginToken(token), null);
+});
+
+/*
+ * Data-retention prune (see Development Guidelines → Data retention): dead
+ * sessions/login_tokens carry an ip_hash + user_agent with no remaining
+ * purpose and must eventually go, but a *recently* dead row (still within the
+ * 30-day grace window) must survive — it's the one place a real support
+ * question ("did I actually get logged out on Tuesday?") could still need it.
+ */
+test('the auth-row prune deletes only rows dead more than 30 days, never live ones', async () => {
+  const { rows: users } = await query('SELECT id FROM users WHERE email = $1', [EMAIL]);
+  const userId = users[0].id;
+
+  const liveToken = await issueSessionToken(userId);
+  const recentlyRevokedToken = await issueSessionToken(userId);
+  const longRevokedToken = await issueSessionToken(userId);
+  const longExpiredToken = await issueSessionToken(userId);
+
+  const hash = (t) => createHash('sha256').update(t).digest('hex');
+  await query('UPDATE sessions SET revoked_at = now() WHERE token_hash = $1', [hash(recentlyRevokedToken)]);
+  await query(
+    "UPDATE sessions SET revoked_at = now() - interval '40 days', expires_at = now() - interval '40 days' WHERE token_hash = $1",
+    [hash(longRevokedToken)],
+  );
+  await query("UPDATE sessions SET expires_at = now() - interval '40 days' WHERE token_hash = $1", [
+    hash(longExpiredToken),
+  ]);
+
+  const oldLoginToken = await createLoginToken(EMAIL);
+  await query("UPDATE login_tokens SET created_at = now() - interval '31 days' WHERE token_hash = $1", [
+    hash(oldLoginToken),
+  ]);
+  const freshLoginToken = await createLoginToken(EMAIL);
+
+  await pruneDeadAuthRows();
+
+  const remaining = await query('SELECT token_hash FROM sessions WHERE user_id = $1', [userId]);
+  const remainingHashes = remaining.rows.map((r) => r.token_hash);
+  assert.ok(remainingHashes.includes(hash(liveToken)), 'a live session must survive');
+  assert.ok(remainingHashes.includes(hash(recentlyRevokedToken)), 'a revoked-but-recent session must survive');
+  assert.ok(!remainingHashes.includes(hash(longRevokedToken)), 'a session dead >30 days must be pruned');
+  assert.ok(!remainingHashes.includes(hash(longExpiredToken)), 'an expired->30-days session must be pruned');
+
+  const remainingLoginTokens = await query('SELECT token_hash FROM login_tokens WHERE email = $1', [EMAIL]);
+  const remainingLoginHashes = remainingLoginTokens.rows.map((r) => r.token_hash);
+  assert.ok(remainingLoginHashes.includes(hash(freshLoginToken)), 'a fresh login token must survive');
+  assert.ok(!remainingLoginHashes.includes(hash(oldLoginToken)), 'a login token older than 30 days must be pruned');
+
+  await query('DELETE FROM sessions WHERE user_id = $1', [userId]);
 });
 
 test('claiming never steals a test that already has an owner', async () => {

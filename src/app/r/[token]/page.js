@@ -9,10 +9,9 @@ import {
   LockedReportPreview,
   RecommendationCard,
   ConfidenceBlock,
-  SuggestedPriceBlock,
+  NoSayerBlock,
   PricingConfidenceBlock,
   FreeProgressBanner,
-  ObjectionBlock,
   PricingStrategyBlock,
 } from '../../../components/ResultsBlocks.js';
 import { ManageTestMenu } from './ManageTestMenu.js';
@@ -331,8 +330,10 @@ export default async function ResultsPage({ params }) {
                       winnerId={freeReport.recommendation.enoughData ? freeReport.recommendation.winner?.id : null}
                     />
                     {test.ask_confidence && <ConfidenceBlock confidence={freeReport.confidence} />}
+                    {/* No `objections` prop — the free report never receives the
+                      * split data at all, rather than receiving it and hiding it. */}
                     {test.ask_suggested_price && (
-                      <SuggestedPriceBlock suggested={freeReport.suggested} test={test} />
+                      <NoSayerBlock suggested={freeReport.suggested} test={test} />
                     )}
                     <PricingConfidenceBlock pricingConfidence={freeReport.pricingConfidence} />
                   </div>
@@ -378,9 +379,15 @@ export default async function ResultsPage({ params }) {
                   />
                 )}
                 {test.ask_confidence && <ConfidenceBlock confidence={report.confidence} />}
-                {test.ask_suggested_price && <SuggestedPriceBlock suggested={report.suggested} test={test} />}
-                {test.is_paid && test.ask_suggested_price && (
-                  <ObjectionBlock objections={report.objections} test={test} />
+                {test.ask_suggested_price && (
+                  <NoSayerBlock
+                    suggested={report.suggested}
+                    test={test}
+                    // Paid-only, and `is_paid` rather than this branch: reaching
+                    // here only means "not locked", which is also true of a free
+                    // test still under its free_response_limit.
+                    objections={test.is_paid ? report.objections : null}
+                  />
                 )}
                 <PricingConfidenceBlock pricingConfidence={report.pricingConfidence} />
               </>

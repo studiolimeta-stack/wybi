@@ -381,17 +381,40 @@ export function ConfidenceBlock({ confidence }) {
   );
 }
 
-export function SuggestedPriceBlock({ suggested, test }) {
+/**
+ * Everything the no-sayers told you, in one card.
+ *
+ * `objections` is optional and is what gates the paid half: the free call
+ * site simply doesn't pass it, so the paywall boundary here is structural
+ * (the data never reaches the component) rather than a conditional inside it
+ * that could later be edited wrong.
+ *
+ *  - without `objections` — the plain suggested-price distribution, unchanged
+ *  - with `objections`    — the winnable/not-winnable split becomes the
+ *                           headline and the distribution drops to supporting
+ *                           detail beneath it
+ *
+ * These were briefly two adjacent cards, which put two differently-scoped
+ * medians — every suggestion vs. only the winnable ones — side by side at the
+ * same visual weight, reading as two competing answers to one question.
+ * Merging keeps both numbers but makes the scoping obvious by hierarchy.
+ */
+export function NoSayerBlock({ suggested, test, objections = null }) {
+  const fmt = (value) => formatPrice(Math.round(value * 100) / 100, test.currency, 'one_time');
+
+  // Only ever true on the paid path, and only once the split is meaningful —
+  // `analyseObjections` refuses under four priced no's.
+  const showSplit = Boolean(objections?.enoughData);
+  const heading = showSplit ? 'Which no’s are winnable' : 'What the no-sayers would pay';
+
   if (!suggested.count) {
     return (
       <div className="card p-6">
-        <h2 className="text-lg font-extrabold tracking-tight">What the no-sayers would pay</h2>
+        <h2 className="text-lg font-extrabold tracking-tight">{heading}</h2>
         <p className="hint mt-2">Nobody has suggested a price yet.</p>
       </div>
     );
   }
-
-  const fmt = (value) => formatPrice(Math.round(value * 100) / 100, test.currency, 'one_time');
 
   // Lowest/average/highest used to be three bare text columns — no visual
   // separation from the median or from each other, and easy to skim past.
@@ -405,104 +428,100 @@ export function SuggestedPriceBlock({ suggested, test }) {
 
   return (
     <div className="card p-6">
-      <h2 className="text-lg font-extrabold tracking-tight">What the no-sayers would pay</h2>
+      <h2 className="text-lg font-extrabold tracking-tight">{heading}</h2>
       <p className="hint mt-1">
-        From {suggested.count} {suggested.count === 1 ? 'person' : 'people'} who said no and named a price.
+        {showSplit
+          ? 'Every suggested price, compared against the price that respondent was actually shown.'
+          : `From ${suggested.count} ${suggested.count === 1 ? 'person' : 'people'} who said no and named a price.`}
       </p>
 
-      <div className="mt-4 rounded-xl border-2 border-ink p-4">
-        <p className="text-xs font-bold uppercase tracking-wider text-muted">Median suggested price</p>
-        <p className="mt-1 text-5xl font-extrabold tracking-tight">{fmt(suggested.median)}</p>
-        {suggested.count >= 4 && (
-          <p className="hint mt-1">
-            Half of the suggestions fall between {fmt(suggested.p25)} and {fmt(suggested.p75)}.
-          </p>
-        )}
-      </div>
-
-      <div className="mt-4 grid grid-cols-3 gap-3">
-        {rangeStats.map((stat) => (
-          <div key={stat.label} className="rounded-xl border border-line bg-paper p-3 text-center">
-            <p className="hint">{stat.label}</p>
-            <p className="mt-1 text-xl font-extrabold tracking-tight sm:text-2xl">{fmt(stat.value)}</p>
+      {showSplit ? (
+        <>
+          <div className="mt-4 rounded-xl border-2 border-ink p-4">
+            <p className="text-xs font-bold uppercase tracking-wider text-muted">Price objections</p>
+            <p className="mt-1 text-5xl font-extrabold tracking-tight">
+              {objections.winnable} <span className="text-2xl text-muted">of {objections.answered}</span>
+            </p>
+            {objections.medianWinnableGap !== null && (
+              <p className="hint mt-1">
+                Median gap of {fmt(objections.medianWinnableGap)} — these people want your offer and named a
+                price within reach of yours.
+              </p>
+            )}
           </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
-/**
- * Paid-only. Splits the no-sayers into "would buy it cheaper" and "doesn't
- * want it at your price at all" — the difference between a discount problem
- * and a product problem, which is a different decision entirely.
- *
- * Only ever rendered from the unlocked branch of r/[token]/page.js.
- */
-export function ObjectionBlock({ objections, test }) {
-  const fmt = (value) => formatPrice(Math.round(value * 100) / 100, test.currency, 'one_time');
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <div className="rounded-xl border border-line bg-paper p-3">
+              <p className="hint">Winnable on price</p>
+              <p className="mt-1 text-xl font-extrabold tracking-tight sm:text-2xl">
+                {Math.round(objections.winnableRate)}%
+              </p>
+              <p className="hint mt-1">
+                Suggested at least {Math.round(objections.thresholdRatio * 100)}% of what you asked.
+              </p>
+            </div>
+            <div className="rounded-xl border border-line bg-paper p-3">
+              <p className="hint">Not a price problem</p>
+              <p className="mt-1 text-xl font-extrabold tracking-tight sm:text-2xl">{objections.valueGap}</p>
+              <p className="hint mt-1">Named a price far below yours — discounting won’t reach them.</p>
+            </div>
+          </div>
 
-  if (!objections.enoughData) {
-    return (
-      <div className="card p-6">
-        <h2 className="text-lg font-extrabold tracking-tight">Which no&apos;s are winnable</h2>
-        <p className="hint mt-2">
-          {objections.answered === 0
-            ? 'Nobody who said no has named a price yet, so there is nothing to compare against.'
-            : `Only ${objections.answered} ${objections.answered === 1 ? 'person has' : 'people have'} said no and named a price. Splitting that few would be noise, not a finding — this fills in as more arrive.`}
-        </p>
-      </div>
-    );
-  }
+          {objections.medianWinnablePrice !== null && objections.winnable > 0 && (
+            <p className="mt-4 text-sm leading-relaxed">
+              <span className="font-bold">What this means: </span>
+              the winnable group clustered around {fmt(objections.medianWinnablePrice)}. Meeting them there
+              converts them — but only {Math.round(objections.winnableRate)}% of your no’s, so weigh it against
+              the margin you’d give up on everyone already saying yes.
+            </p>
+          )}
+        </>
+      ) : (
+        <div className="mt-4 rounded-xl border-2 border-ink p-4">
+          <p className="text-xs font-bold uppercase tracking-wider text-muted">Median suggested price</p>
+          <p className="mt-1 text-5xl font-extrabold tracking-tight">{fmt(suggested.median)}</p>
+          {suggested.count >= 4 && (
+            <p className="hint mt-1">
+              Half of the suggestions fall between {fmt(suggested.p25)} and {fmt(suggested.p75)}.
+            </p>
+          )}
+        </div>
+      )}
 
-  const winnableShare = Math.round(objections.winnableRate);
-
-  return (
-    <div className="card p-6">
-      <h2 className="text-lg font-extrabold tracking-tight">Which no&apos;s are winnable</h2>
-      <p className="hint mt-1">
-        Every no-sayer&apos;s suggested price, compared against the price they were actually shown.
-      </p>
-
-      <div className="mt-4 rounded-xl border-2 border-ink p-4">
-        <p className="text-xs font-bold uppercase tracking-wider text-muted">Price objections</p>
-        <p className="mt-1 text-5xl font-extrabold tracking-tight">
-          {objections.winnable} <span className="text-2xl text-muted">of {objections.answered}</span>
-        </p>
-        {objections.medianWinnableGap !== null && (
-          <p className="hint mt-1">
-            Median gap of {fmt(objections.medianWinnableGap)} — these people want your offer and named a price
-            within reach of yours.
+      {/* The full distribution. Headline on the free path, supporting detail
+        * behind a divider on the paid one — same numbers either way, so
+        * unlocking never shows FEWER facts than the free report did. */}
+      <div className={showSplit ? 'mt-5 border-t border-line pt-5' : 'mt-4'}>
+        {showSplit && (
+          <p className="hint">
+            Across all {suggested.count} {suggested.count === 1 ? 'suggestion' : 'suggestions'} — including the
+            ones too far below your price to win back — the median is {fmt(suggested.median)}
+            {suggested.count >= 4 ? `, with half between ${fmt(suggested.p25)} and ${fmt(suggested.p75)}` : ''}.
           </p>
         )}
-      </div>
-
-      <div className="mt-4 grid grid-cols-2 gap-3">
-        <div className="rounded-xl border border-line bg-paper p-3">
-          <p className="hint">Winnable on price</p>
-          <p className="mt-1 text-xl font-extrabold tracking-tight sm:text-2xl">{winnableShare}%</p>
-          <p className="hint mt-1">Suggested at least {Math.round(objections.thresholdRatio * 100)}% of what you asked.</p>
-        </div>
-        <div className="rounded-xl border border-line bg-paper p-3">
-          <p className="hint">Not a price problem</p>
-          <p className="mt-1 text-xl font-extrabold tracking-tight sm:text-2xl">{objections.valueGap}</p>
-          <p className="hint mt-1">Named a price far below yours — discounting won&apos;t reach them.</p>
+        <div className={`grid grid-cols-3 gap-3 ${showSplit ? 'mt-3' : ''}`}>
+          {rangeStats.map((stat) => (
+            <div key={stat.label} className="rounded-xl border border-line bg-paper p-3 text-center">
+              <p className="hint">{stat.label}</p>
+              <p className="mt-1 text-xl font-extrabold tracking-tight sm:text-2xl">{fmt(stat.value)}</p>
+            </div>
+          ))}
         </div>
       </div>
 
-      {objections.medianWinnablePrice !== null && objections.winnable > 0 && (
-        <p className="mt-4 text-sm leading-relaxed">
-          <span className="font-bold">What this means: </span>
-          the winnable group clustered around {fmt(objections.medianWinnablePrice)}. Meeting them there converts
-          them — but only {winnableShare}% of your no&apos;s, so weigh it against the margin you&apos;d give up on
-          everyone already saying yes.
+      {/* Paid, but too thin to split — say why rather than silently showing
+        * the free layout to someone who just paid for the split. */}
+      {objections && !objections.enoughData && objections.answered > 0 && (
+        <p className="hint mt-4">
+          Too few no-sayers have named a price to split them into winnable and not — that fills in as more
+          responses arrive.
         </p>
       )}
 
-      {objections.silent > 0 && (
+      {showSplit && objections.silent > 0 && (
         <p className="hint mt-3">
-          {objections.silent} more said no without naming a price and {objections.silent === 1 ? 'is' : 'are'} not
-          counted above.
+          {objections.silent} more said no without naming a price and{' '}
+          {objections.silent === 1 ? 'is' : 'are'} not counted above.
         </p>
       )}
     </div>

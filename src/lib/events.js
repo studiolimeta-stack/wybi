@@ -32,6 +32,7 @@ export const EVENT_NAMES = new Set([
   'account_created',
   'account_deleted',
   'test_claimed',
+  'paddle_unexpected_quantity',
 ]);
 
 /**

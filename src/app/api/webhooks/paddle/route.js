@@ -69,6 +69,21 @@ export async function POST(request) {
         currency: data.currency_code || config.unlockCurrency,
       });
       await track('report_unlocked', { testId: test.id, props: { mock: false } });
+
+      // A report unlock is a single boolean flip — there is no product
+      // meaning to buying more than one. The Paddle Price should have
+      // quantity capped at 1 (dashboard setting), but that's config, not
+      // code, so it can drift. If a transaction ever slips through with
+      // quantity > 1, the customer was charged for units that bought them
+      // nothing extra — surface it instead of silently pocketing it, so it
+      // can be manually refunded.
+      const totalQuantity = (data.items || []).reduce((sum, item) => sum + (item.quantity || 0), 0);
+      if (totalQuantity > 1) {
+        await track('paddle_unexpected_quantity', {
+          testId: test.id,
+          props: { transactionId: data.id, quantity: totalQuantity, amount: totalMinorUnits },
+        });
+      }
     }
   }
 

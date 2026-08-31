@@ -85,7 +85,7 @@ export function PriceTable({ priceStats, test, winnerId }) {
           <td className="p-3 text-right">
             <div className="flex items-center justify-end gap-2">
               <div className="w-14">
-                <ConfidenceMeter value={row.yesRate} max={maxRate} color="var(--color-accent)" />
+                <Meter value={row.yesRate} max={maxRate} color="var(--color-accent)" />
               </div>
               <span className="tabular-nums w-12 text-right">{pct(row.yesRate)}</span>
             </div>
@@ -243,7 +243,7 @@ export function FreeProgressBanner({ responseCount, freeLimit }) {
         </p>
       )}
       <div className="mt-2.5">
-        <ConfidenceMeter value={Math.min(responseCount, freeLimit)} max={freeLimit} color="var(--color-accent)" />
+        <Meter value={Math.min(responseCount, freeLimit)} max={freeLimit} color="var(--color-accent)" />
       </div>
     </div>
   );
@@ -366,7 +366,7 @@ export function ConfidenceBlock({ confidence }) {
               </span>
             </div>
             <div className="mt-1.5">
-              <ConfidenceMeter value={row.rate} max={100} color="var(--color-accent)" />
+              <Meter value={row.rate} max={100} color="var(--color-accent)" />
             </div>
           </div>
         ))}
@@ -643,17 +643,26 @@ const CONFIDENCE_TIERS = [
   { min: 0, key: 'danger', pillClass: 'bg-alert text-white border-alert', fill: 'var(--color-alert)', label: 'Too thin to act on', shortLabel: 'Too thin to act on' },
 ];
 
-/** A same-ramp meter: fill is `color`, track is a lighter step of that same hue
+/**
+ * A same-ramp meter: fill is `color`, track is a lighter step of that same hue
  * (never a generic gray) so severity/emphasis reads across the whole bar, per
- * the meter spec — not just the filled portion. */
-function ConfidenceMeter({ value, max, color, thick = false }) {
+ * the meter spec — not just the filled portion. Shared across the paid
+ * report (confidence score, per-part breakdown, per-price intent bars) and
+ * the admin Distribution funnel — one meter primitive, not two.
+ *
+ * `target`, when given, draws a hairline reference tick at that position —
+ * gray/ink, never a data hue, per the "reference marks use text tokens"
+ * rule: it marks a goal, it isn't itself a value.
+ */
+export function Meter({ value, max, color, thick = false, target = null }) {
   const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0;
   // A non-zero score still needs a sliver of visible fill — 100% width maps to
   // 0px on a 0-width bar otherwise, reading as "no data" for e.g. 1/40.
   const width = value > 0 ? Math.max(pct, 3) : 0;
+  const targetPct = target != null && max > 0 ? Math.min(100, (target / max) * 100) : null;
   return (
     <div
-      className={`w-full overflow-hidden rounded-full ${thick ? 'h-2.5' : 'h-1.5'}`}
+      className={`relative w-full overflow-hidden rounded-full ${thick ? 'h-2.5' : 'h-1.5'}`}
       style={{ background: `color-mix(in oklab, ${color} ${thick ? 16 : 14}%, white)` }}
       role="progressbar"
       aria-valuenow={value}
@@ -661,6 +670,9 @@ function ConfidenceMeter({ value, max, color, thick = false }) {
       aria-valuemax={max}
     >
       <div className="h-full rounded-full" style={{ width: `${width}%`, background: color }} />
+      {targetPct !== null && (
+        <div aria-hidden="true" className="absolute inset-y-0 w-px bg-ink/35" style={{ left: `${targetPct}%` }} />
+      )}
     </div>
   );
 }
@@ -697,7 +709,7 @@ export function PricingConfidenceBlock({ pricingConfidence }) {
         <p className="text-muted">/ 100</p>
       </div>
       <div className="mt-3">
-        <ConfidenceMeter value={score} max={100} color={tier.fill} thick />
+        <Meter value={score} max={100} color={tier.fill} thick />
       </div>
 
       <div className="mt-5 border-t border-line pt-5">
@@ -725,7 +737,7 @@ export function PricingConfidenceBlock({ pricingConfidence }) {
                 </div>
                 {asked && (
                   <div className="mt-1.5">
-                    <ConfidenceMeter value={value} max={part.max} color="var(--color-accent)" />
+                    <Meter value={value} max={part.max} color="var(--color-accent)" />
                   </div>
                 )}
               </div>

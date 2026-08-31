@@ -1,7 +1,8 @@
 import { SiteHeader, SiteFooter } from '../../../components/SiteChrome.js';
 import { AdminDenied } from '../../../components/AdminDenied.js';
+import { AdminPagination } from '../../../components/AdminPagination.js';
 import { formatPrice } from '../../../lib/config.js';
-import { listUsersForAdmin, getUserSummary } from '../../../lib/admin.js';
+import { listUsersForAdmin, countUsersForAdmin, getUserSummary } from '../../../lib/admin.js';
 import { checkAdminAccess, adminHref } from '../../../lib/adminAuth.js';
 import { currentUser } from '../../../lib/session.js';
 
@@ -14,22 +15,43 @@ const USER_FILTERS = [
   { value: 'free', label: 'Free' },
 ];
 
+const PAGE_SIZE = 15;
+
 export default async function AdminUsersPage({ searchParams }) {
-  const { key, users: userFilterParam } = await searchParams;
+  const { key, users: userFilterParam, page: pageParam } = await searchParams;
   const user = await currentUser();
   const { authorized, viaToken } = checkAdminAccess({ key, user });
 
   if (!authorized) return <AdminDenied user={user} />;
 
   const userFilter = USER_FILTERS.some((f) => f.value === userFilterParam) ? userFilterParam : 'all';
-  const [users, userSummary] = await Promise.all([
-    listUsersForAdmin({ limit: 100, filter: userFilter }),
+
+  // Count first, then clamp the requested page into range, THEN fetch that
+  // page's rows — sequential rather than parallel on purpose, so a stale or
+  // hand-edited `?page=` (bookmarked from when there were more users, or just
+  // typed in) can't run past the real last page and render an empty table.
+  const [totalUsers, userSummary] = await Promise.all([
+    countUsersForAdmin({ filter: userFilter }),
     getUserSummary(),
   ]);
+  const totalPages = Math.max(1, Math.ceil(totalUsers / PAGE_SIZE));
+  const requestedPage = Number.parseInt(pageParam, 10);
+  const page = Number.isFinite(requestedPage) ? Math.min(Math.max(1, requestedPage), totalPages) : 1;
+
+  const users = await listUsersForAdmin({ limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE, filter: userFilter });
 
   // Same token-passthrough rule as the filter tabs — /admin/users/[id] is a
   // separate page, not a query param on this one, so it needs its own key.
   const userHref = (id) => (viaToken ? `/admin/users/${id}?key=${encodeURIComponent(key)}` : `/admin/users/${id}`);
+
+  // Filter tabs deliberately don't carry `page` through (adminHref only sends
+  // what's explicitly passed) — switching filters resets to page 1, which is
+  // correct: "page 3 of Paid" has no guaranteed relationship to "page 3 of All".
+  const pageHref = (targetPage) =>
+    adminHref('/admin/users', { viaToken, key }, {
+      users: userFilter === 'all' ? undefined : userFilter,
+      page: targetPage > 1 ? targetPage : undefined,
+    });
 
   return (
     <>
@@ -120,6 +142,7 @@ export default async function AdminUsersPage({ searchParams }) {
             </tbody>
           </table>
           <p className="hint mt-2">⚠️ unverified = email captured at test creation but never confirmed by a real login.</p>
+          <AdminPagination page={page} totalPages={totalPages} total={totalUsers} pageSize={PAGE_SIZE} buildHref={pageHref} />
         </div>
       </main>
       <SiteFooter />

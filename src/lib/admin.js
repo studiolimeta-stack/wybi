@@ -33,16 +33,23 @@ export function isValidAdminToken(key) {
 }
 
 /**
- * `filter`: 'all' | 'paid' | 'free'. Filtering happens in SQL rather than by
- * slicing the array in the page component — with only 100 rows loaded it
- * wouldn't matter today, but a `LIMIT` applied after an in-memory filter would
- * silently under-count once the user base outgrows that page size.
+ * Shared by `listUsersForAdmin` and `countUsersForAdmin` — one place for the
+ * filter logic so the list and its count can never drift onto different
+ * WHERE clauses (which would show e.g. "Page 1 of 3" against a table that
+ * only ever has 1 page of rows, or vice versa).
  */
-export async function listUsersForAdmin({ limit = 100, filter = 'all' } = {}) {
-  const where = filter === 'paid' ? "WHERE EXISTS (SELECT 1 FROM tests t WHERE t.user_id = u.id AND t.is_paid)"
+function userFilterWhere(filter) {
+  return filter === 'paid' ? "WHERE EXISTS (SELECT 1 FROM tests t WHERE t.user_id = u.id AND t.is_paid)"
     : filter === 'free' ? "WHERE NOT EXISTS (SELECT 1 FROM tests t WHERE t.user_id = u.id AND t.is_paid)"
     : '';
+}
 
+/**
+ * `filter`: 'all' | 'paid' | 'free'. Filtering happens in SQL rather than by
+ * slicing the array in the page component — a `LIMIT`/`OFFSET` applied after
+ * an in-memory filter would silently under-count and mispaginate.
+ */
+export async function listUsersForAdmin({ limit = 100, offset = 0, filter = 'all' } = {}) {
   const { rows } = await query(
     `SELECT u.id, u.email, u.name, u.email_verified_at, u.created_at, u.last_login_at,
             (SELECT COUNT(*)::int FROM tests t WHERE t.user_id = u.id AND t.status <> 'archived')
@@ -62,12 +69,18 @@ export async function listUsersForAdmin({ limit = 100, filter = 'all' } = {}) {
             (SELECT array_agg(DISTINCT i.provider ORDER BY i.provider) FROM identities i WHERE i.user_id = u.id)
               AS providers
      FROM users u
-     ${where}
+     ${userFilterWhere(filter)}
      ORDER BY u.created_at DESC
-     LIMIT $1`,
-    [limit],
+     LIMIT $1 OFFSET $2`,
+    [limit, offset],
   );
   return rows;
+}
+
+/** Total row count for a given filter — the denominator `/admin/users` needs to render "Page X of Y". */
+export async function countUsersForAdmin({ filter = 'all' } = {}) {
+  const { rows } = await query(`SELECT COUNT(*)::int AS total FROM users u ${userFilterWhere(filter)}`);
+  return rows[0].total;
 }
 
 /** Single-user lookup for the /admin/users/[id] detail page. Null if the id doesn't exist. */

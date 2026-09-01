@@ -194,7 +194,7 @@ h1, h2, h3, .font-extrabold, .font-bold {
     border: 2px solid var(--color-ink);
     padding: 0.85rem 1.4rem;
     cursor: pointer;
-    transition: transform 0.06s ease, box-shadow 0.06s ease;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
     box-shadow: 0 4px 10px rgba(30, 35, 64, 0.16);
     text-align: center;
     white-space: nowrap;
@@ -209,6 +209,10 @@ h1, h2, h3, .font-extrabold, .font-bold {
   }
 
   .btn-primary { background: var(--color-accent); color: #fff; }
+  .btn-primary:hover:not(:disabled):not(:active) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 18px rgba(98, 80, 245, 0.32);
+  }
   .btn-plain   { background: #fffdf9; color: var(--color-ink); }
 
   /* Some primary-button labels are built from dynamic parts (a price, an

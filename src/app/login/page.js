@@ -60,7 +60,7 @@ export default async function LoginPage({ searchParams }) {
             </p>
 
             {errorMessage && (
-              <p className="err mt-4 rounded-lg bg-locked px-3 py-2">{errorMessage}</p>
+              <p className="err mt-4 rounded-lg px-3 py-2">{errorMessage}</p>
             )}
 
             <a

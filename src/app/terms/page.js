@@ -14,7 +14,7 @@ export default function TermsPage() {
       <LegalPage title="Terms of Service" updated={UPDATED}>
         <p>
           These terms cover using Would You Buy It? (&ldquo;WYBY&rdquo;) — either to create a price test or to
-          answer someone else&apos;s. By using the site you agree to them.
+          answer someone else&apos;s. WYBY is operated by Studio Limeta. By using the site you agree to them.
         </p>
 
         <h2>What WYBY does</h2>

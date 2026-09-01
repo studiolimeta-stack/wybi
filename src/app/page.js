@@ -271,8 +271,8 @@ export default function HomePage() {
 
         <section className="py-12 sm:py-14">
           <div className="relative overflow-hidden rounded-[1.75rem] bg-ink px-6 py-12 text-center text-white shadow-[0_16px_36px_rgba(15,23,42,0.2)] sm:px-12 sm:py-16">
-            <div className="pointer-events-none absolute -left-10 -top-12 h-40 w-40 rounded-full bg-accent opacity-70 blur-2xl" aria-hidden="true" />
-            <div className="pointer-events-none absolute -bottom-16 -right-10 h-48 w-48 rounded-full bg-sun opacity-80 blur-2xl" aria-hidden="true" />
+            <div className="pointer-events-none absolute -left-20 -top-20 h-64 w-64 rounded-full bg-accent-bright opacity-45 blur-3xl" aria-hidden="true" />
+            <div className="pointer-events-none absolute -bottom-24 -right-16 h-72 w-72 rounded-full bg-accent opacity-40 blur-3xl" aria-hidden="true" />
             <div className="relative mx-auto max-w-2xl">
               <p className="eyebrow bg-white/10 text-white">Ready when you are</p>
               <h2 className="mt-4 text-3xl font-extrabold tracking-tight sm:text-4xl">
@@ -281,7 +281,7 @@ export default function HomePage() {
               <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-white/75 sm:text-lg">
                 Set up a test in 30 seconds, share one link, and get a clear signal from real people before you launch.
               </p>
-              <Link href="/create" className="btn mt-7 w-full border-white bg-sun text-ink sm:w-auto">
+              <Link href="/create" className="btn mt-7 w-full border-accent bg-accent text-white sm:w-auto">
                 Create your free price test
               </Link>
               <p className="mt-4 text-sm font-medium text-white/65">

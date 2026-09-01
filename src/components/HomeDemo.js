@@ -59,6 +59,7 @@ export function HomeDemo() {
       <OfferCard
         test={DEMO_OFFER}
         price={34}
+        titleTag="h3"
         titleClassName="pt-4 pb-2 md:pt-0 md:pb-0"
         className="border-none shadow-[0_8px_24px_rgba(30,35,64,0.06)]"
         priceExtra={

@@ -11,6 +11,11 @@ import heroPricingIllustration from '../../public/brand/hero-pricing-illustratio
 
 export const dynamic = 'force-static';
 
+export const metadata = {
+  alternates: { canonical: '/' },
+  openGraph: { url: '/' },
+};
+
 const FREE_INCLUDES = [
   'Unlimited price tests',
   `${config.freeResponseLimit} responses per test, free`,
@@ -67,8 +72,31 @@ const STEPS = [
 ];
 
 export default function HomePage() {
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'WebSite',
+        name: 'Would You Buy It?',
+        url: config.appUrl,
+        description: 'Pricing research with real people.',
+      },
+      {
+        '@type': 'WebApplication',
+        name: 'Would You Buy It?',
+        url: config.appUrl,
+        applicationCategory: 'BusinessApplication',
+        operatingSystem: 'Web',
+        description:
+          'Create a price test, show each respondent one price, and see how purchase intent changes across prices.',
+        isAccessibleForFree: true,
+      },
+    ],
+  };
+
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
       {/* Fired client-side because this page is force-static — there is no
         * per-visitor server render to hang a track() call on. Without it the
         * creator funnel in /admin has no denominator (PRD §38). */}
@@ -140,7 +168,7 @@ export default function HomePage() {
                   <div className="flex h-full w-full items-center justify-center" style={{ transform: `scale(${step.imageScale})` }}>
                     <Image
                       src={step.image}
-                      alt=""
+                      alt={`Screenshot: ${step.title}`}
                       width={step.width}
                       height={step.height}
                       unoptimized

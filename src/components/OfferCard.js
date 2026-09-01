@@ -10,7 +10,7 @@ import { ProductImageGallery } from './ProductImageGallery.js';
  * measurement instrument, not a route into the offer, so it never gives the
  * creator an external link that can distract from — or follow — a response.
  */
-export function OfferCard({ test, price, showPrice = true, priceExtra, children, className = '', titleClassName = '' }) {
+export function OfferCard({ test, price, showPrice = true, priceExtra, children, className = '', titleClassName = '', titleTag: Title = 'h1' }) {
   const storedImages = Array.isArray(test.image_urls) ? test.image_urls : [];
   const imageUrls = storedImages.length > 0 ? storedImages : test.image_url ? [test.image_url] : [];
   const items = (test.included_items || '')
@@ -23,7 +23,7 @@ export function OfferCard({ test, price, showPrice = true, priceExtra, children,
       {imageUrls.length > 0 && <ProductImageGallery images={imageUrls} presentations={test.image_presentations} />}
 
       <div className={imageUrls.length ? 'p-0 md:pt-1' : 'p-6 sm:p-8'}>
-        <h1 className={`text-3xl font-extrabold tracking-tight ${titleClassName}`}>{test.title}</h1>
+        <Title className={`text-3xl font-extrabold tracking-tight ${titleClassName}`}>{test.title}</Title>
         <p className="mt-2 text-muted leading-relaxed">{test.description}</p>
 
         {items.length > 0 && (

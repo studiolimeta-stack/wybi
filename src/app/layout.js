@@ -47,6 +47,11 @@ export default function RootLayout({ children }) {
           <Script
             src={config.analytics.scriptUrl}
             data-website-id={config.analytics.websiteId}
+            // /admin's token door (`?key=<ADMIN_TOKEN>`) means that secret can
+            // sit in a page URL — without this, Umami would record it verbatim
+            // in every admin pageview's stored URL. Query strings aren't needed
+            // for traffic counts anyway, so this is excluded site-wide.
+            data-exclude-search="true"
             strategy="afterInteractive"
           />
         )}

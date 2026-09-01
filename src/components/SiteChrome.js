@@ -37,8 +37,12 @@ const FOOTER_COLUMNS = [
   {
     heading: 'Account',
     links: [
+      // 'My tests' stays visible either way — it's cookie-based and works
+      // logged out (see /dashboard). 'Account' requires a session, so it's
+      // dropped for a logged-out visitor instead of just bouncing them to
+      // /login right next to the 'Log in' link doing the same thing.
       { href: '/dashboard', label: 'My tests' },
-      { href: '/account', label: 'Account' },
+      { href: '/account', label: 'Account', loggedInOnly: true },
       // Dropped for a signed-in visitor — see `SiteFooter`. Logging out is a
       // POST (`/api/auth/logout`), so it can't be a plain footer link; the
       // header's AccountSubNav owns that.
@@ -115,7 +119,7 @@ export async function SiteFooter({ variant = 'full' }) {
               <p className="text-xs font-bold uppercase tracking-wider text-white/45">{column.heading}</p>
               <ul className="mt-3 space-y-2 text-sm">
                 {column.links
-                  .filter((link) => !(link.loggedOutOnly && user))
+                  .filter((link) => !(link.loggedOutOnly && user) && !(link.loggedInOnly && !user))
                   .map((link) => (
                     <li key={link.href}>
                       <Link href={link.href} className="text-white/70 hover:text-white">

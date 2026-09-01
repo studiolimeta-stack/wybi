@@ -251,7 +251,11 @@ test('the post-login redirect refuses anything off-site', async () => {
   assert.equal(safeRedirect('/dashboard'), '/dashboard');
   assert.equal(safeRedirect('/r/abc?x=1'), '/r/abc?x=1');
   assert.equal(safeRedirect('//evil.com'), '/dashboard');
+  assert.equal(safeRedirect('/\\evil.com'), '/dashboard');
+  assert.equal(safeRedirect('/\t/evil.com'), '/dashboard');
+  assert.equal(safeRedirect('/\\/evil.com'), '/dashboard');
   assert.equal(safeRedirect('https://evil.com'), '/dashboard');
+  assert.equal(safeRedirect('https:evil.com'), '/dashboard');
   assert.equal(safeRedirect('/api/auth/logout'), '/dashboard');
   assert.equal(safeRedirect(undefined), '/dashboard');
   assert.equal(safeRedirect('javascript:alert(1)'), '/dashboard');

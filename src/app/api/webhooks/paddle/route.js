@@ -88,7 +88,7 @@ export async function POST(request) {
       if (totalQuantity > 1) {
         await track('paddle_unexpected_quantity', {
           testId: test.id,
-          props: { transactionId: data.id, quantity: totalQuantity, amount: totalMinorUnits },
+          props: { transactionId: data.id, quantity: totalQuantity, amount: toDecimal(totals.total) },
         });
       }
     }

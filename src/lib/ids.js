@@ -29,10 +29,24 @@ export function hashIp(ip) {
   return createHash('sha256').update(`${config.sessionSecret}:${ip}`).digest('hex').slice(0, 32);
 }
 
+/**
+ * The real client IP as seen by nginx. nginx sets `X-Real-IP` to `$remote_addr`
+ * (the actual TCP peer) and builds `X-Forwarded-For` with
+ * `$proxy_add_x_forwarded_for`, which APPENDS the peer IP to whatever the client
+ * sent — so `X-Forwarded-For`'s first entry is attacker-controlled and must
+ * never be used for rate-limiting or abuse signals. Trust `X-Real-IP`; fall
+ * back to the last (closest-hop) `X-Forwarded-For` entry only if it's absent.
+ */
 export function clientIp(headers) {
+  const realIp = headers.get('x-real-ip');
+  if (realIp && realIp.trim()) return realIp.trim();
+
   const forwarded = headers.get('x-forwarded-for');
-  if (forwarded) return forwarded.split(',')[0].trim();
-  return headers.get('x-real-ip') || null;
+  if (forwarded) {
+    const hops = forwarded.split(',').map((part) => part.trim()).filter(Boolean);
+    if (hops.length) return hops[hops.length - 1];
+  }
+  return null;
 }
 
 export function deviceTypeFrom(userAgent = '') {

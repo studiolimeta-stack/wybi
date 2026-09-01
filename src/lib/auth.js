@@ -312,14 +312,27 @@ export async function claimTests(userId, creatorTokens) {
 /* --------------------------------------------------------------- redirects */
 
 /**
- * Login routes accept a `?next=`. Anything but a same-site relative path is
- * discarded — including protocol-relative `//evil.com`, which a naive
- * startsWith('/') check happily lets through.
+ * Login routes accept a `?next=`. Anything that isn't a same-site relative path
+ * is discarded. A prefix check alone is not enough: protocol-relative
+ * `//evil.com` AND backslash variants like `/\evil.com` / `/\t/evil.com` (the
+ * WHATWG URL parser folds `\` into `/` for http(s), so these resolve
+ * cross-origin) both start with a single `/`. Resolve the target against our
+ * own origin and require the result to stay on it, rather than trying to
+ * enumerate every bypass.
  */
 export function safeRedirect(target, fallback = '/dashboard') {
-  if (typeof target !== 'string' || !target.startsWith('/') || target.startsWith('//')) return fallback;
+  if (typeof target !== 'string' || !target.startsWith('/')) return fallback;
   if (target.startsWith('/api/')) return fallback;
-  return target;
+
+  let resolved;
+  try {
+    resolved = new URL(target, config.appUrl);
+  } catch {
+    return fallback;
+  }
+  if (resolved.origin !== new URL(config.appUrl).origin) return fallback;
+
+  return `${resolved.pathname}${resolved.search}${resolved.hash}`;
 }
 
 /* -------------------------------------------------------- OAuth state token */

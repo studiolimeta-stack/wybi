@@ -44,9 +44,22 @@ export async function recordMockPayment({ testId, userId }) {
  */
 export async function recordPaddlePayment({ testId, userId, transactionId, amount, currency, fee = null, earnings = null }) {
   await transaction(async (client) => {
+    // Idempotency guard: Paddle re-delivers the same `transaction.completed`
+    // on any non-2xx (and occasionally otherwise). The webhook's `!test.is_paid`
+    // check catches the common sequential-retry case, but a second row for one
+    // transaction still inflates admin revenue. The partial unique index from
+    // migration 007 is the real backstop against a concurrent double-delivery;
+    // this SELECT keeps the INSERT from throwing on the ordinary retry.
+    const existing = await client.query(
+      `SELECT 1 FROM payments WHERE provider = 'paddle' AND provider_payment_id = $1`,
+      [transactionId],
+    );
+    if (existing.rowCount) return;
+
     await client.query(
       `INSERT INTO payments (user_id, test_id, provider, provider_payment_id, amount, currency, status, fee, earnings)
-       VALUES ($1, $2, 'paddle', $3, $4, $5, 'succeeded', $6, $7)`,
+       VALUES ($1, $2, 'paddle', $3, $4, $5, 'succeeded', $6, $7)
+       ON CONFLICT DO NOTHING`,
       [userId, testId, transactionId, amount, currency, fee, earnings],
     );
     await client.query('UPDATE tests SET is_paid = true, updated_at = now() WHERE id = $1', [testId]);

@@ -4,7 +4,7 @@ import { LegalPage } from '../../components/LegalPage.js';
 
 export const metadata = { title: 'Privacy Policy — Would You Buy It?' };
 
-const UPDATED = 'August 31, 2026';
+const UPDATED = 'September 1, 2026';
 
 export default function PrivacyPage() {
   return (
@@ -12,7 +12,7 @@ export default function PrivacyPage() {
       <SiteHeader />
       <LegalPage title="Privacy Policy" updated={UPDATED}>
         <p>
-          Would You Buy It? (&ldquo;WYBI&rdquo;, &ldquo;we&rdquo;) is a pricing-research tool: a creator describes an
+          Would You Buy It? (&ldquo;WYBY&rdquo;, &ldquo;we&rdquo;) is a pricing-research tool: a creator describes an
           offer and up to five prices, and people who visit the shareable link each see exactly one of those prices
           and say yes or no. This page explains what we collect, from whom, and why.
         </p>
@@ -66,7 +66,7 @@ export default function PrivacyPage() {
         </ul>
 
         <h2>Who we share data with</h2>
-        <p>We use a small number of third-party services to run WYBI, and only for the purpose named:</p>
+        <p>We use a small number of third-party services to run WYBY, and only for the purpose named:</p>
         <ul>
           <li><strong>Google</strong> — if you choose to sign in with Google, to verify your identity.</li>
           <li>

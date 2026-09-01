@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-const VISITOR_COOKIE = 'wybi_vid';
+const VISITOR_COOKIE = 'wyby_vid';
 const ONE_YEAR = 60 * 60 * 24 * 365;
 
 /**

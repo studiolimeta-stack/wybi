@@ -11,7 +11,7 @@ import { cookies } from 'next/headers';
 import { issueSessionToken, lookupSession, revokeSessionByToken, claimTests } from './auth.js';
 import { readMyTestTokens } from './visitor.js';
 
-export const SESSION_COOKIE = 'wybi_session';
+export const SESSION_COOKIE = 'wyby_session';
 
 /**
  * The cookie deliberately outlives the database row. `sessions.expires_at` is

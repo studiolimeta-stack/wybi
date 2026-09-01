@@ -4,21 +4,21 @@ import { LegalPage } from '../../components/LegalPage.js';
 
 export const metadata = { title: 'Cookie Policy — Would You Buy It?' };
 
-const UPDATED = 'August 29, 2026';
+const UPDATED = 'September 1, 2026';
 
 const COOKIES = [
   {
-    name: 'wybi_vid',
+    name: 'wyby_vid',
     purpose: 'Anonymous respondent ID — stops the same browser voting twice on one price test.',
     duration: '1 year',
   },
   {
-    name: 'wybi_mine',
+    name: 'wyby_mine',
     purpose: 'Remembers which tests you created on this browser, so /dashboard can list them without an account.',
     duration: '1 year',
   },
   {
-    name: 'wybi_session',
+    name: 'wyby_session',
     purpose: 'Keeps you signed in after Google or email sign-in.',
     duration: '120 days',
   },
@@ -30,7 +30,7 @@ export default function CookiesPage() {
       <SiteHeader />
       <LegalPage title="Cookie Policy" updated={UPDATED}>
         <p>
-          WYBI uses a small number of first-party cookies to make the product work — never third-party advertising
+          WYBY uses a small number of first-party cookies to make the product work — never third-party advertising
           or tracking cookies. Nothing here is used to build an ad profile, and none of it leaves our servers.
         </p>
 
@@ -58,15 +58,15 @@ export default function CookiesPage() {
           analytics tool we self-host on our own server for basic traffic stats (page views, referrers, browser
           mix). Detailed step-by-step funnel data (which step of a flow people reach) is recorded separately,
           first-party, server-side, into our own database — it doesn&apos;t use a cookie of its own beyond{' '}
-          <strong>wybi_vid</strong> above. See the <Link href="/privacy">Privacy Policy</Link> for the full detail
+          <strong>wyby_vid</strong> above. See the <Link href="/privacy">Privacy Policy</Link> for the full detail
           on both.
         </p>
 
         <h2>Managing cookies</h2>
         <p>
           You can clear or block these cookies from your browser&apos;s settings at any time. Blocking{' '}
-          <strong>wybi_vid</strong> means our duplicate-vote check can&apos;t recognise your browser between
-          visits; blocking <strong>wybi_session</strong> means you&apos;ll be signed out. Neither will stop you
+          <strong>wyby_vid</strong> means our duplicate-vote check can&apos;t recognise your browser between
+          visits; blocking <strong>wyby_session</strong> means you&apos;ll be signed out. Neither will stop you
           from using the core product.
         </p>
 

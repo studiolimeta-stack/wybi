@@ -48,7 +48,7 @@ export async function alertOpsOfSendFailure(context, err) {
   const allowed = await checkRateLimit('opsAlert', 'ops-alert');
   if (!allowed) return;
 
-  const subject = `⚠️ WYBI ${context} send failing`;
+  const subject = `⚠️ WYBY ${context} send failing`;
   const text = `${context} email send failed:\n\n${err.message}\n\nCheck the Resend dashboard (quota/logs) and \`pm2 logs wouldyoubuyit\`.`;
 
   try {

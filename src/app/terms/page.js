@@ -5,7 +5,7 @@ import { config } from '../../lib/config.js';
 
 export const metadata = { title: 'Terms of Service — Would You Buy It?' };
 
-const UPDATED = 'August 27, 2026';
+const UPDATED = 'September 1, 2026';
 
 export default function TermsPage() {
   return (
@@ -13,11 +13,11 @@ export default function TermsPage() {
       <SiteHeader />
       <LegalPage title="Terms of Service" updated={UPDATED}>
         <p>
-          These terms cover using Would You Buy It? (&ldquo;WYBI&rdquo;) — either to create a price test or to
+          These terms cover using Would You Buy It? (&ldquo;WYBY&rdquo;) — either to create a price test or to
           answer someone else&apos;s. By using the site you agree to them.
         </p>
 
-        <h2>What WYBI does</h2>
+        <h2>What WYBY does</h2>
         <p>
           A creator describes an offer and up to five prices. Each respondent who opens the shared link is shown
           exactly one of those prices, at random, and answers whether they&apos;d buy at that price. The creator
@@ -38,7 +38,7 @@ export default function TermsPage() {
           </li>
           <li>You&apos;re responsible for the accuracy of what you describe in your offer and for the prices you test.</li>
           <li>
-            You won&apos;t use WYBI to test anything illegal, to collect personal data from respondents beyond what
+            You won&apos;t use WYBY to test anything illegal, to collect personal data from respondents beyond what
             the product itself asks for, or to try to identify an individual respondent.
           </li>
           <li>We can remove a test that violates these terms or that we reasonably believe is abusive, fraudulent, or spam.</li>
@@ -55,7 +55,7 @@ export default function TermsPage() {
         <h2>Payments</h2>
         <p>
           Our order process is handled by <strong>Paddle.com</strong>, which acts as the <strong>Merchant of
-          Record</strong> for every report unlock. That means Paddle — not WYBI — is the seller for the
+          Record</strong> for every report unlock. That means Paddle — not WYBY — is the seller for the
           transaction: Paddle takes the payment, calculates and collects any sales tax or VAT that applies where
           you are, issues your invoice, and is the name that appears on your card or bank statement. Paddle&apos;s
           own{' '}
@@ -65,7 +65,7 @@ export default function TermsPage() {
           govern that purchase alongside these terms.
         </p>
         <p>
-          The {config.unlockCurrency} ${config.unlockPrice.toFixed(2)} unlock price is what WYBI charges for the
+          The {config.unlockCurrency} ${config.unlockPrice.toFixed(2)} unlock price is what WYBY charges for the
           report; any tax Paddle has to add is calculated at checkout and shown in the total before you confirm.
           Because an unlock grants immediate access to a fully generated report, purchases are generally final
           once the report has been unlocked. If something went wrong with a charge, contact us and we&apos;ll sort
@@ -85,7 +85,7 @@ export default function TermsPage() {
 
         <h2>No warranty</h2>
         <p>
-          WYBI reports reflect the responses actually collected — they&apos;re a research signal, not a guarantee of
+          WYBY reports reflect the responses actually collected — they&apos;re a research signal, not a guarantee of
           real-world sales. We flag when a test doesn&apos;t have enough responses to name a confident
           best-performing price rather than showing you a number we don&apos;t believe. The service is provided
           &ldquo;as is,&rdquo; without warranties of any kind, to the extent the law allows.
@@ -94,7 +94,7 @@ export default function TermsPage() {
         <h2>Changes</h2>
         <p>
           We may update these terms as the product changes. We&apos;ll update the date at the top of this page when
-          we do. Continuing to use WYBI after a change means you accept the updated terms.
+          we do. Continuing to use WYBY after a change means you accept the updated terms.
         </p>
 
         <h2>Contact</h2>

@@ -1,8 +1,8 @@
 import { cookies } from 'next/headers';
 import { generateVisitorId } from './ids.js';
 
-export const VISITOR_COOKIE = 'wybi_vid';
-export const MY_TESTS_COOKIE = 'wybi_mine';
+export const VISITOR_COOKIE = 'wyby_vid';
+export const MY_TESTS_COOKIE = 'wyby_mine';
 
 const ONE_YEAR = 60 * 60 * 24 * 365;
 

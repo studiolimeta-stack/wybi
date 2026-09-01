@@ -7,7 +7,7 @@ import { config } from './config.js';
  * immediately. Otherwise the test is genuinely anonymous (`user_id = NULL`) —
  * `/create` no longer takes an optional email to pre-attach ownership; the
  * only way to attach a test to an account is the real login/signup flow
- * (claiming from `wybi_mine`, or the explicit `/r/[token]` cross-device
+ * (claiming from `wyby_mine`, or the explicit `/r/[token]` cross-device
  * claim), never an unverified email typed into a form. See the "Revised
  * Preview + Account Flow" spec, §7.
  */

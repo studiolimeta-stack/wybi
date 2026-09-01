@@ -23,7 +23,7 @@ const CONFIDENCE_OPTIONS = [
  * exactly, not a guessed-at modal width.
  *
  * Fully local, no persistence: never calls `/api/respond`, never touches
- * `wybi_mine`, never generates a token. `offer`/`price` are just the
+ * `wyby_mine`, never generates a token. `offer`/`price` are just the
  * creator's current, unsaved form state — nothing here is written anywhere.
  */
 export function PreviewModal({ offer, price, askConfidence, askSuggestedPrice, onClose }) {

@@ -29,6 +29,19 @@ function targetTier(value, target) {
 }
 
 /**
+ * Inverse of `targetTier` — here `max` is a ceiling to stay under (Resend's
+ * free-tier send cap), not a floor to reach, so "good" is the LOW end. Same
+ * three-tier visual language as everywhere else on this page, opposite
+ * direction: comfortable well under, watch approaching it, alert at or over.
+ */
+function capTier(value, max) {
+  const pct = max > 0 ? value / max : 0;
+  if (pct >= 1) return { label: 'At cap', fill: 'var(--color-alert)', pillClass: 'bg-alert text-white border-alert' };
+  if (pct >= 0.7) return { label: 'Near cap', fill: 'var(--color-sun)', pillClass: 'bg-sun text-ink border-sun' };
+  return { label: 'Comfortable', fill: 'var(--color-ok)', pillClass: 'bg-ok text-white border-ok' };
+}
+
+/**
  * The three funnel stages, in funnel order — never sorted by size, since the
  * whole point is that each is a subset of the one above it. `target` is null
  * for the first stage on purpose: there's no named goal for "got a response
@@ -81,7 +94,7 @@ export const metadata = { title: 'Admin', robots: { index: false, follow: false 
  * actually needs action, not just reading.
  */
 async function loadOverview() {
-  const [tests, responses, funnel, reports] = await Promise.all([
+  const [tests, responses, funnel, reports, emailsToday] = await Promise.all([
     query(`
       SELECT COUNT(*)::int AS total,
              COUNT(*) FILTER (WHERE status = 'active')::int AS active,
@@ -97,6 +110,15 @@ async function loadOverview() {
       SELECT tr.id, tr.reason, tr.created_at, t.slug, t.title, t.creator_token
       FROM test_reports tr JOIN tests t ON t.id = tr.test_id
       ORDER BY tr.created_at DESC LIMIT 25`),
+    // "Today" is the UTC calendar day — Resend doesn't publish the exact
+    // instant its 100/day free-tier counter resets, so this is the closest
+    // approximation without pinging their API. Counts every real (non-dev-mode)
+    // send, magic links and ops alerts alike, from lib/mailer.js#sendMail.
+    query(`
+      SELECT COUNT(*)::int AS n
+      FROM events
+      WHERE name = 'email_sent'
+        AND created_at >= date_trunc('day', now() AT TIME ZONE 'utc') AT TIME ZONE 'utc'`),
   ]);
 
   // Distribution matters more than the average here — a handful of viral tests
@@ -119,6 +141,7 @@ async function loadOverview() {
     funnel: funnel.rows,
     reports: reports.rows,
     distribution: distribution.rows[0],
+    emailsSentToday: emailsToday.rows[0].n,
     traffic,
     onlineNow,
   };
@@ -154,6 +177,31 @@ export default async function AdminOverviewPage({ searchParams }) {
               <p className="text-2xl font-extrabold">{tile.value}</p>
             </div>
           ))}
+        </div>
+
+        <div className="card p-5">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 className="font-extrabold">Emails sent today</h2>
+            <p className="shrink-0 flex items-baseline gap-2 tabular-nums">
+              <strong className="text-lg">
+                {data.emailsSentToday} / {config.email.dailyLimit}
+              </strong>
+              <span className={`pill ${capTier(data.emailsSentToday, config.email.dailyLimit).pillClass}`}>
+                {capTier(data.emailsSentToday, config.email.dailyLimit).label}
+              </span>
+            </p>
+          </div>
+          <div className="mt-2">
+            <Meter
+              value={data.emailsSentToday}
+              max={config.email.dailyLimit}
+              color={capTier(data.emailsSentToday, config.email.dailyLimit).fill}
+              thick
+            />
+          </div>
+          <p className="hint mt-1">
+            Magic links + ops alerts, against Resend&apos;s free-tier cap. UTC calendar day.
+          </p>
         </div>
 
         {data.traffic && (

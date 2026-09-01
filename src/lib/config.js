@@ -90,6 +90,11 @@ export const config = {
     enabled: Boolean(process.env.RESEND_API_KEY && process.env.EMAIL_FROM),
     apiKey: process.env.RESEND_API_KEY || null,
     from: process.env.EMAIL_FROM || null,
+    // Resend's free-tier cap (see Before public launch #7) — surfaced on
+    // /admin as "Emails sent today" so it's visible before it's ever hit,
+    // not discovered via a silent 429 from Resend. Bump this the day the
+    // account is upgraded off free tier; nothing else reads this value.
+    dailyLimit: 100,
   },
 
   /**

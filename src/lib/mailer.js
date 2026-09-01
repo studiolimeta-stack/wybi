@@ -1,5 +1,6 @@
 import { config } from './config.js';
 import { checkRateLimit } from './tests.js';
+import { track } from './events.js';
 
 /**
  * Sends transactional mail through Resend when configured. When it is not
@@ -7,8 +8,16 @@ import { checkRateLimit } from './tests.js';
  * to check `sendMail`'s return value and show the content on-screen instead.
  * This is the same fallback shape as Google auth and Stripe: build the real
  * path once, degrade to a visible dev fallback rather than a silent no-op.
+ *
+ * `type` is a short label (e.g. 'magic_link', 'ops_alert') logged alongside
+ * the `email_sent` event it fires on every real (non-dev-mode) send — the
+ * one place this is counted, so every current and future call site is
+ * covered without remembering to instrument it separately. This is what
+ * /admin's "Emails sent today" tile counts against Resend's free-tier
+ * 100/day cap (`config.email.dailyLimit`) — never the recipient address
+ * itself, which stays out of the events table entirely.
  */
-export async function sendMail({ to, subject, html, text }) {
+export async function sendMail({ to, subject, html, text, type = 'unknown' }) {
   if (!config.email.enabled) {
     console.log(`[dev-mail] to=${to} subject="${subject}"\n${text}`);
     return { sent: false, devMode: true };
@@ -28,6 +37,7 @@ export async function sendMail({ to, subject, html, text }) {
     throw new Error(`resend_send_failed status=${res.status} body=${body.slice(0, 300)}`);
   }
 
+  await track('email_sent', { props: { type } });
   return { sent: true, devMode: false };
 }
 
@@ -52,7 +62,13 @@ export async function alertOpsOfSendFailure(context, err) {
   const text = `${context} email send failed:\n\n${err.message}\n\nCheck the Resend dashboard (quota/logs) and \`pm2 logs wouldyoubuyit\`.`;
 
   try {
-    await sendMail({ to, subject, html: `<pre style="font-family: monospace; white-space: pre-wrap;">${text}</pre>`, text });
+    await sendMail({
+      to,
+      subject,
+      html: `<pre style="font-family: monospace; white-space: pre-wrap;">${text}</pre>`,
+      text,
+      type: 'ops_alert',
+    });
   } catch (alertErr) {
     console.error(`ops_alert_send_failed: ${alertErr.message}`);
   }

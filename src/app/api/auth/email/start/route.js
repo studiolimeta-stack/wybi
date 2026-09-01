@@ -40,7 +40,7 @@ export async function POST(request) {
   // Deliverability failures must not tell the caller a link went out when it
   // didn't — but they also must never say whether the address exists.
   try {
-    const result = await sendMail({ to: email, subject, html, text });
+    const result = await sendMail({ to: email, subject, html, text, type: 'magic_link' });
     return Response.json({
       ok: true,
       devMode: result.devMode,

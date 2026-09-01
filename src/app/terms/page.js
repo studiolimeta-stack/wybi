@@ -68,9 +68,9 @@ export default function TermsPage() {
           The {config.unlockCurrency} ${config.unlockPrice.toFixed(2)} unlock price is what WYBY charges for the
           report; any tax Paddle has to add is calculated at checkout and shown in the total before you confirm.
           Because an unlock grants immediate access to a fully generated report, purchases are generally final
-          once the report has been unlocked. If something went wrong with a charge, contact us and we&apos;ll sort
-          it out — billing and refunds are processed through Paddle, and you can also reach Paddle&apos;s buyer
-          support directly at{' '}
+          once the report has been unlocked. See our <Link href="/refund-policy">Refund Policy</Link> for
+          how payment issues and refund requests are handled. Billing and refunds are processed through Paddle, and
+          you can also reach Paddle&apos;s buyer support directly at{' '}
           <a href="https://paddle.net" target="_blank" rel="noopener noreferrer">
             paddle.net
           </a>

@@ -16,6 +16,8 @@ export function currencySymbol(code) {
 
 export function formatPrice(amount, currency, billingType = 'one_time') {
   const value = Number(amount);
-  const shown = Number.isInteger(value) ? value.toString() : value.toFixed(2);
-  return `${currencySymbol(currency)}${shown}${BILLING_SUFFIX[billingType] ?? ''}`;
+  const sign = value < 0 ? '-' : '';
+  const abs = Math.abs(value);
+  const shown = Number.isInteger(abs) ? abs.toString() : abs.toFixed(2);
+  return `${sign}${currencySymbol(currency)}${shown}${BILLING_SUFFIX[billingType] ?? ''}`;
 }

@@ -4,6 +4,7 @@ import Script from 'next/script';
 import { OfferCard } from '../../../components/OfferCard.js';
 import { SiteFooter } from '../../../components/SiteChrome.js';
 import { RespondFlow } from './RespondFlow.js';
+import { ShareTestLink } from './ShareTestLink.js';
 import { getTestBySlug, assignPriceVariant, getExistingResponse } from '../../../lib/tests.js';
 import { readVisitorId } from '../../../lib/visitor.js';
 import { track } from '../../../lib/events.js';
@@ -88,6 +89,7 @@ export default async function RespondentPage({ params }) {
                 {formatPrice(existing.amount, test.currency, test.billing_type)}. One vote per person keeps
                 the numbers honest.
               </p>
+              <ShareTestLink slug={test.slug} title={test.title} />
               <Link href={`/create?ref=${encodeURIComponent(test.slug)}`} className="btn btn-primary mt-5 w-full sm:w-auto">
                 Test your own product
               </Link>

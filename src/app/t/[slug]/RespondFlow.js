@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Share2 } from 'lucide-react';
 import { OfferCard } from '../../../components/OfferCard.js';
 import { TrackedLink } from '../../../components/Track.js';
+import { ShareTestLink } from './ShareTestLink.js';
 
 const CONFIDENCE_OPTIONS = [
   { value: 'maybe', label: 'Maybe', hint: 'Sounds interesting.' },
@@ -27,7 +27,6 @@ export function RespondFlow({ test, price, slug, currencySymbol, askConfidence, 
   const [suggested, setSuggested] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
-  const [linkCopied, setLinkCopied] = useState(false);
 
   // Invisible Turnstile widget. Renders into `turnstileRef` the moment the
   // Cloudflare script (loaded by the page, see t/[slug]/page.js) is ready,
@@ -130,46 +129,6 @@ export function RespondFlow({ test, price, slug, currencySymbol, askConfidence, 
     }
   }
 
-  /**
-   * The lightweight, respondent-side half of the viral loop — separate from
-   * the "Test yours in 30 seconds" CTA below, which is the creator-recruiting
-   * loop (PRD §35, tracked as `viral_cta_clicked`). This one lets someone who
-   * just answered bring in the next respondent, which is a different action
-   * worth its own event so the two loops don't get blended in /admin.
-   *
-   * Always points at the plain `/t/[slug]` URL this respondent is already
-   * on — never `window.location.href` as-is, which could be carrying this
-   * visitor's own utm/referrer params forward and misattributing the next
-   * respondent's traffic to whatever brought this one in.
-   */
-  async function shareTest() {
-    fetch('/api/events', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: 'respondent_share_clicked', slug }),
-      keepalive: true,
-    }).catch(() => {});
-
-    const shareUrl = `${window.location.origin}/t/${slug}`;
-
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: `Would you buy ${test.title}?`, url: shareUrl });
-      } catch {
-        // Dismissing the system share sheet is a normal outcome, not an error.
-      }
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-    } catch {
-      // Clipboard API is blocked in some in-app browsers — nothing else to fall back to here.
-    }
-    setLinkCopied(true);
-    setTimeout(() => setLinkCopied(false), 2000);
-  }
-
   return (
     <>
       <OfferCard
@@ -265,20 +224,7 @@ export function RespondFlow({ test, price, slug, currencySymbol, askConfidence, 
                   {answer === 'yes' ? 'The creator sees the number, never your name.' : 'Honest answers are the useful ones.'}
                 </p>
 
-                {/* Deliberately small and plain — a second, unrelated action sitting
-                  * right under the vote confirmation must never compete with the real
-                  * CTA card below it (decision 9: nothing here should read as a sell). */}
-                <div className="mt-4 border-t border-line pt-3">
-                  <p className="hint">Know someone whose opinion would be useful?</p>
-                  <button
-                    type="button"
-                    className="btn-ghost mt-1 inline-flex items-center gap-1.5 text-sm"
-                    onClick={shareTest}
-                  >
-                    <Share2 className="h-3.5 w-3.5" aria-hidden="true" />
-                    {linkCopied ? 'Link copied' : 'Share this test'}
-                  </button>
-                </div>
+                <ShareTestLink slug={slug} title={test.title} />
               </div>
             )}
           </>

@@ -27,6 +27,7 @@ export const EVENT_NAMES = new Set([
   'report_unlocked',
   'result_shared',
   'viral_cta_clicked',
+  'respondent_share_clicked',
   'login_started',
   'login_completed',
   'account_created',

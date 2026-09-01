@@ -70,9 +70,14 @@ export default async function RespondentPage({ params }) {
     <>
       <main className="wrap py-8 sm:py-14">
         <div className="mx-auto mb-6 max-w-2xl text-center">
-          <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
-            Would you buy {test.title}?
+          <h1 className="text-xl font-extrabold tracking-tight sm:text-2xl">
+            Quick price feedback
           </h1>
+          <p className="mt-2 text-muted">
+            You&apos;ve been invited to give your honest opinion on this offer.
+            <br />
+            Review the details below, then answer as if you were deciding for yourself.
+          </p>
         </div>
         {existing ? (
           <OfferCard test={test} price={variant.amount}>
@@ -101,7 +106,7 @@ export default async function RespondentPage({ params }) {
         )}
 
         <p className="hint mt-8 text-center">
-          One response per person keeps the numbers honest.{' '}
+          One response per person helps keep the results reliable.{' '}
           <Link href={`/report/${test.slug}`} className="underline">
             Report this test
           </Link>

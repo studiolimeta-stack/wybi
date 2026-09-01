@@ -49,7 +49,10 @@ export function HomeDemo() {
   return (
     <div id="demo-offer-panel">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3 px-1">
-        <span className="pill bg-locked">Live demo</span>
+        {/* Marketing tag, not a status — uses the brand eyebrow treatment
+          * rather than the paywall/inactive tint (`bg-locked`) so it doesn't
+          * read as "restricted" on the one page meant to sell the product. */}
+        <span className="eyebrow">Live demo</span>
         <span className="text-xs font-bold text-muted">Try the full respondent flow</span>
       </div>
 

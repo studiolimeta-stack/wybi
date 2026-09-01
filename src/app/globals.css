@@ -46,9 +46,26 @@ html {
   overflow-x: hidden;
 }
 
+/*
+ * Sticky footer. Every page is <SiteHeader/><main>...</main><SiteFooter/>
+ * inside a bare fragment (see layout.js: `<body>{children}</body>` with no
+ * wrapping element) — so header/main/footer land as `body`'s three direct
+ * children, and this flex column + `main`'s flex-grow is enough to pin the
+ * footer to the bottom of the viewport on a short page (e.g. an empty
+ * dashboard) instead of leaving it stranded right under the content with a
+ * band of bare page background below it. Portal content (ManageTestMenu's
+ * dropdown) is unaffected — it's `position: fixed`, which takes it out of
+ * flex flow entirely.
+ */
 body {
   font-family: var(--font-sans);
   min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+body > main {
+  flex: 1 0 auto;
 }
 
 h1, h2, h3, .font-extrabold, .font-bold {

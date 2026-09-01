@@ -1,4 +1,5 @@
 import { formatPrice, currencySymbol } from '../lib/config.js';
+import { ConfirmedPill, NeutralPill } from './StatusPill.js';
 
 const pct = (value) => `${value.toFixed(value >= 10 ? 0 : 1)}%`;
 const money = (value, currency) =>
@@ -145,7 +146,11 @@ export function LockedPriceTable({ variants, test }) {
 function LockedRecommendationPreview({ hasRecommendation }) {
   return (
     <div className="card p-6 bg-locked">
-      <p className="pill bg-white">{hasRecommendation ? 'Current recommendation' : 'Still collecting'}</p>
+      {hasRecommendation ? (
+        <ConfirmedPill>Current recommendation</ConfirmedPill>
+      ) : (
+        <NeutralPill>Still collecting</NeutralPill>
+      )}
       <p className="mt-3 text-5xl font-extrabold tracking-tight">{hasRecommendation ? '••• / month' : '—'}</p>
       <p className="mt-3 text-muted leading-relaxed">
         {hasRecommendation
@@ -271,7 +276,7 @@ export function RecommendationCard({ recommendation, test, isPaid = false, prici
     // of confident-but-wrong number this card exists to avoid.
     return (
       <div className="card p-6 bg-locked">
-        <p className="pill bg-white">{isPaid ? 'Full report' : 'Building your sample'}</p>
+        {isPaid ? <ConfirmedPill>Full report</ConfirmedPill> : <NeutralPill>Building your sample</NeutralPill>}
         <h2 className="mt-3 text-xl font-extrabold tracking-tight">Keep collecting before choosing a price.</h2>
         <p className="mt-2 text-muted text-sm leading-relaxed">
           {isPaid ? (

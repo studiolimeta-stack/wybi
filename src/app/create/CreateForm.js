@@ -319,8 +319,10 @@ export function CreateForm() {
                     alt=""
                     className="aspect-square w-full rounded-lg border-2 border-ink object-cover"
                   />
+                  {/* Just marks the primary photo — not a paywall/inactive
+                    * state, so it doesn't wear that tint (`bg-locked`). */}
                   {index === 0 ? (
-                    <span className="pill bg-locked absolute left-1.5 top-1.5 px-2 py-1 text-xs">Main</span>
+                    <span className="pill bg-white absolute left-1.5 top-1.5 px-2 py-1 text-xs">Main</span>
                   ) : (
                     <button
                       type="button"

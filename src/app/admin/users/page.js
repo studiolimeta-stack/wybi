@@ -6,6 +6,7 @@ import { formatPrice } from '../../../lib/config.js';
 import { listUsersForAdmin, countUsersForAdmin, getUserSummary } from '../../../lib/admin.js';
 import { checkAdminAccess, adminHref } from '../../../lib/adminAuth.js';
 import { currentUser } from '../../../lib/session.js';
+import { PaidPill, AlertPill } from '../../../components/StatusPill.js';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Admin — users', robots: { index: false, follow: false } };
@@ -130,10 +131,8 @@ export default async function AdminUsersPage({ searchParams }) {
               {users.map((u) => (
                 <tr key={u.id} className="border-b border-line">
                   <td className="py-2">
-                    <span className={`pill ${u.paid_test_count > 0 ? 'bg-white text-ok border-ok' : 'bg-locked'}`}>
-                      {u.paid_test_count > 0 ? 'Paid' : 'Free'}
-                    </span>
-                    {u.banned_at && <span className="pill ml-1 border-alert bg-white text-alert">Banned</span>}
+                    <PaidPill isPaid={u.paid_test_count > 0} />
+                    {u.banned_at && <AlertPill className="ml-1">Banned</AlertPill>}
                   </td>
                   <td className="py-2">
                     <a href={userHref(u.id)} className="font-semibold underline">

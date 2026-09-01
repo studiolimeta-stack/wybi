@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { SiteHeader, SiteFooter } from '../../components/SiteChrome.js';
+import { TestStatusPill, PaidPill } from '../../components/StatusPill.js';
 import { readMyTestTokens } from '../../lib/visitor.js';
 import { listTestsForViewer } from '../../lib/tests.js';
 import { currentUser } from '../../lib/session.js';
@@ -65,14 +66,8 @@ export default async function DashboardPage() {
                       </p>
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-1.5">
-                      <span
-                        className={`pill ${test.status === 'active' ? 'bg-ok text-white border-ok' : 'bg-locked'}`}
-                      >
-                        {test.status}
-                      </span>
-                      <span className={`pill ${test.is_paid ? 'bg-white' : 'bg-locked'}`}>
-                        {test.is_paid ? 'Paid' : 'Free'}
-                      </span>
+                      <TestStatusPill status={test.status} />
+                      <PaidPill isPaid={test.is_paid} />
                     </div>
                   </div>
                 </Link>

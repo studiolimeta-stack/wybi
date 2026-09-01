@@ -4,6 +4,7 @@ import { currentUser } from '../../lib/session.js';
 import { listIdentities } from '../../lib/auth.js';
 import { listTestsByUserId } from '../../lib/tests.js';
 import { listPaymentsForUser } from '../../lib/payments.js';
+import { ConfirmedPill } from '../../components/StatusPill.js';
 import { AccountActions } from './AccountActions.js';
 import { BillingSummary } from './BillingSummary.js';
 
@@ -33,7 +34,7 @@ export default async function AccountPage() {
             <p className="label">Email</p>
             <p className="flex items-center gap-2 text-lg font-bold">
               {user.email}
-              {user.emailVerifiedAt && <span className="pill bg-white text-ok border-ok">Verified</span>}
+              {user.emailVerifiedAt && <ConfirmedPill>Verified</ConfirmedPill>}
             </p>
 
             <p className="label mt-5">Sign-in methods</p>

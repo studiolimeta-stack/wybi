@@ -224,7 +224,11 @@ export default function HomePage() {
 
           <div className="mx-auto mt-8 grid max-w-3xl items-stretch gap-5 sm:grid-cols-2">
             <div className="card flex flex-col p-6 sm:p-7">
-              <p className="pill bg-locked w-fit">Always free</p>
+              {/* Pairs with the paid tier's solid accent pill below — an
+                * outline of the same brand purple, not the paywall/inactive
+                * tint. This is a plan name on a pricing page, not a status
+                * about a specific test, so it shouldn't read as "locked out". */}
+              <p className="pill bg-white border-accent text-accent w-fit">Always free</p>
               <p className="mt-4 text-4xl font-extrabold tracking-tight">$0</p>
               <p className="mt-1 text-muted">to create and share a test</p>
               <ul className="mt-5 flex-1 space-y-2 text-sm">

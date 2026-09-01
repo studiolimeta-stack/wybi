@@ -2,6 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ShieldCheck } from 'lucide-react';
 import wybiMark from '../../public/brand/wybi-mark.png';
+import wybiLockup from '../../public/brand/wybi-lockup.png';
 import { currentUser } from '../lib/session.js';
 import { isAdminEmail } from '../lib/admin.js';
 import { HeaderChrome } from './HeaderChrome.js';
@@ -78,12 +79,15 @@ export async function SiteFooter({ variant = 'full' }) {
   if (variant === 'minimal') {
     return (
       <footer className="wrap py-10 text-center text-xs text-muted">
+        {/* Tagline, then the full lockup below it — nothing else besides the
+          * home link on the logo itself. Still attribution, not a navigation
+          * bar: no nav links, no CTA, per decision 9 (this page stays a
+          * measurement instrument) — a logo linking home is the one
+          * exception every site on the internet gets away with. */}
         <p>Real people. Different prices. <span className="font-bold text-accent">Real answers.</span></p>
-        <p className="mt-1">
-          <Link href="/" className="underline">
-            Would You Buy It?
-          </Link>
-        </p>
+        <Link href="/" aria-label="Would You Buy It home" className="mt-3 inline-block">
+          <Image src={wybiLockup} alt="Would You Buy It?" className="mx-auto h-6 w-auto object-contain" />
+        </Link>
       </footer>
     );
   }

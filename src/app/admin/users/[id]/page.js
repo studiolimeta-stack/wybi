@@ -6,6 +6,7 @@ import { formatPrice } from '../../../../lib/config.js';
 import { getUserForAdmin, listTestsForUserAdmin } from '../../../../lib/admin.js';
 import { checkAdminAccess, adminHref } from '../../../../lib/adminAuth.js';
 import { currentUser } from '../../../../lib/session.js';
+import { TestStatusPill, ConfirmedPill, AlertPill } from '../../../../components/StatusPill.js';
 import { BanUserButton } from './BanUserButton.js';
 import { DeleteTestButton } from '../../../../components/DeleteTestButton.js';
 
@@ -68,7 +69,7 @@ export default async function AdminUserPage({ params, searchParams }) {
           <div>
             <h1 className="text-2xl font-extrabold tracking-tight">
               {target.name || target.email}
-              {target.banned_at && <span className="pill ml-2 border-alert bg-white text-alert">Banned</span>}
+              {target.banned_at && <AlertPill className="ml-2">Banned</AlertPill>}
             </h1>
             <p className="hint mt-1">
               {target.email}
@@ -105,9 +106,9 @@ export default async function AdminUserPage({ params, searchParams }) {
                   <tr key={t.id} className="border-b border-line">
                     <td className="py-2">{t.title}</td>
                     <td className="py-2">
-                      <span className={`pill ${t.is_paid ? 'bg-white text-ok border-ok' : 'bg-locked'}`}>
-                        {t.status}
-                        {t.is_paid ? ' · paid' : ''}
+                      <span className="inline-flex flex-wrap items-center gap-1">
+                        <TestStatusPill status={t.status} />
+                        {t.is_paid && <ConfirmedPill>Paid</ConfirmedPill>}
                       </span>
                       {t.reported_count > 0 && <span className="ml-1 text-alert">⚠️ {t.reported_count}</span>}
                     </td>

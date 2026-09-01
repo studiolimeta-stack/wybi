@@ -3,6 +3,7 @@ import { ChevronDown, Eye } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { SiteHeader, SiteFooter } from '../../../components/SiteChrome.js';
 import { CheckIcon } from '../../../components/CheckIcon.js';
+import { TestStatusPill, ConfirmedPill } from '../../../components/StatusPill.js';
 import {
   StatTile,
   PriceTable,
@@ -173,10 +174,8 @@ export default async function ResultsPage({ params }) {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
             <div className="flex items-center gap-2 pt-2">
-              <span className={`pill ${test.status === 'active' ? 'bg-ok text-white border-ok' : 'bg-locked'}`}>
-                {test.status}
-              </span>
-              {test.is_paid && <span className="pill bg-white">Full report</span>}
+              <TestStatusPill status={test.status} />
+              {test.is_paid && <ConfirmedPill>Full report</ConfirmedPill>}
             </div>
             <h1 className="mt-3 text-3xl sm:text-4xl font-extrabold tracking-tight">{test.title}</h1>
             <p className="mt-2 text-muted">Your purchase-intent results, in one place.</p>

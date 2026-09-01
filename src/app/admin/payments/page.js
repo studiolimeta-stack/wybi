@@ -134,7 +134,10 @@ export default async function AdminPaymentsPage({ searchParams }) {
                   </td>
                   <td className="py-2">{p.user_email || '—'}</td>
                   <td className="py-2">
-                    <span className={`pill ${p.provider === 'dev_mock' ? 'bg-locked' : 'bg-white'}`}>
+                    {/* dev_mock vs. a real provider is an environment fact, not
+                      * a paid/free status — doesn't wear `bg-locked`. Muted
+                      * text is enough to flag "not a real charge" at a glance. */}
+                    <span className={`pill bg-white ${p.provider === 'dev_mock' ? 'text-muted border-line' : ''}`}>
                       {p.provider}
                     </span>
                   </td>

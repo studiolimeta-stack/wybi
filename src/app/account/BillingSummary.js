@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { isReportLocked } from '../../lib/tests.js';
 import { formatPrice } from '../../lib/config.js';
+import { PaidPill } from '../../components/StatusPill.js';
 
 /**
  * Unlocks are per TEST here, not an account-wide subscription — there is no
@@ -20,9 +21,7 @@ export function BillingSummary({ tests, payments }) {
     <div className="card mt-4 p-6">
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-lg font-extrabold tracking-tight">Billing</h2>
-        <span className={`pill ${hasPaid ? 'bg-white text-ok border-ok' : 'bg-locked'}`}>
-          {hasPaid ? 'Paid' : 'Free'}
-        </span>
+        <PaidPill isPaid={hasPaid} />
       </div>
 
       {hasPaid ? (

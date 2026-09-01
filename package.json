@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start -H 127.0.0.1 -p 4003",
     "migrate": "node scripts/migrate.js",
-    "test": "node --env-file=.env --test scripts/test-stats.js scripts/test-auth.js",
+    "test": "node --env-file=.env --test scripts/test-stats.js scripts/test-auth.js scripts/test-respondent-privacy.js",
     "smoke": "node scripts/smoke-test.js"
   },
   "dependencies": {

@@ -5,7 +5,7 @@ import { OfferCard } from '../../../components/OfferCard.js';
 import { SiteFooter } from '../../../components/SiteChrome.js';
 import { RespondFlow } from './RespondFlow.js';
 import { ShareTestLink } from './ShareTestLink.js';
-import { getTestBySlug, assignPriceVariant, getExistingResponse } from '../../../lib/tests.js';
+import { getTestBySlug, assignPriceVariant, getExistingResponse, publicTestView } from '../../../lib/tests.js';
 import { readVisitorId } from '../../../lib/visitor.js';
 import { track } from '../../../lib/events.js';
 import { currencySymbol, formatPrice, config } from '../../../lib/config.js';
@@ -97,7 +97,11 @@ export default async function RespondentPage({ params }) {
           </OfferCard>
         ) : (
           <RespondFlow
-            test={test}
+            /* Allowlisted projection, never the raw row — `RespondFlow` is a
+             * client component, so whatever is passed here is serialised into
+             * the page source that every respondent can read. See
+             * `publicTestView`. */
+            test={publicTestView(test)}
             price={variant.amount}
             slug={test.slug}
             currencySymbol={currencySymbol(test.currency)}

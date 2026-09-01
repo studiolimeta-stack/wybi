@@ -72,6 +72,40 @@ export async function getTestByCreatorToken(token) {
   return rows[0] ?? null;
 }
 
+/**
+ * The respondent-safe projection of a test row.
+ *
+ * `getTestBySlug` is a `SELECT *`, so the row it returns carries `creator_token`
+ * — the 32-byte key that is the *only* authorisation on `/r/[token]`,
+ * `GET|PATCH|DELETE /api/tests/[token]` and the CSV export. Handing that whole
+ * row to a client component serialises every column into the RSC payload, which
+ * is plain text in the page source of `/t/[slug]` — the one URL a creator
+ * deliberately sends to strangers. Any respondent could then read the paid
+ * report, export the responses, or delete the test.
+ *
+ * So: allowlist, never denylist. A new column added to `tests` is invisible to
+ * respondents until it is named here, which is the safe default — the reverse
+ * (remembering to strip each new secret) is the failure mode that caused this.
+ *
+ * These are exactly the fields `OfferCard` (and `RespondFlow`, which owns it)
+ * render. `product_url` is deliberately absent: nothing on the respondent page
+ * renders it, and it must not sit in the payload of a page whose whole job is to
+ * not editorialise about the offer.
+ */
+export function publicTestView(test) {
+  if (!test) return null;
+  return {
+    slug: test.slug,
+    title: test.title,
+    description: test.description,
+    included_items: test.included_items,
+    image_url: test.image_url,
+    image_urls: test.image_urls,
+    currency: test.currency,
+    billing_type: test.billing_type,
+  };
+}
+
 export async function getPriceVariants(testId) {
   const { rows } = await query(
     'SELECT * FROM price_variants WHERE test_id = $1 ORDER BY position, amount',

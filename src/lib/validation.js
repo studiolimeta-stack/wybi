@@ -70,16 +70,41 @@ export function validateTestInput(body) {
     ? body.billingType
     : 'one_time';
 
+  // A creator authoring a price list is the opposite case to a respondent
+  // mid-vote (see `validateResponseInput`, where silently dropping a nonsense
+  // suggested price is right because losing the vote would be worse). Here the
+  // creator is watching, will act on what we say, and is about to send this
+  // test to real people — so a price we cannot use has to be named, never
+  // dropped on the floor. Dropping it silently produced a test that quietly
+  // measured fewer prices than the creator believed it did, and, when every
+  // price was rejected, the flatly untrue "Add at least one price to test."
   const rawPrices = Array.isArray(body.prices) ? body.prices : [];
   const prices = [];
+  let sawTooHigh = false;
+  let sawUnparseable = false;
   for (const raw of rawPrices) {
-    const amount = Number.parseFloat(String(raw).replace(',', '.'));
-    if (!Number.isFinite(amount) || amount <= 0) continue;
+    // An empty input is an untouched spare row on the form, not a mistake.
+    const text = String(raw ?? '').trim();
+    if (!text) continue;
+    const amount = Number.parseFloat(text.replace(',', '.'));
+    if (!Number.isFinite(amount) || amount <= 0) {
+      sawUnparseable = true;
+      continue;
+    }
     const rounded = Math.round(amount * 100) / 100;
-    if (rounded > config.maxSuggestedPrice) continue;
+    if (rounded > config.maxSuggestedPrice) {
+      sawTooHigh = true;
+      continue;
+    }
     if (!prices.includes(rounded)) prices.push(rounded);
   }
-  if (!prices.length) errors.prices = 'Add at least one price to test.';
+  if (sawTooHigh) {
+    errors.prices = `Keep each price under ${config.maxSuggestedPrice.toLocaleString('en-US')}.`;
+  } else if (sawUnparseable) {
+    errors.prices = 'Enter each price as a number above zero, like 29.';
+  } else if (!prices.length) {
+    errors.prices = 'Add at least one price to test.';
+  }
   if (prices.length > config.maxPriceVariants) {
     errors.prices = `Test up to ${config.maxPriceVariants} prices in one go.`;
   }

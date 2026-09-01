@@ -437,7 +437,7 @@ export function CreateForm() {
         <label className="flex gap-3 items-start cursor-pointer">
           <input
             type="checkbox"
-            className="mt-1 h-5 w-5 shrink-0"
+            className="mt-1 h-5 w-5 shrink-0 accent-accent"
             checked={form.askConfidence}
             onChange={update('askConfidence')}
           />
@@ -452,7 +452,7 @@ export function CreateForm() {
         <label className="flex gap-3 items-start cursor-pointer">
           <input
             type="checkbox"
-            className="mt-1 h-5 w-5 shrink-0"
+            className="mt-1 h-5 w-5 shrink-0 accent-accent"
             checked={form.askSuggestedPrice}
             onChange={update('askSuggestedPrice')}
           />

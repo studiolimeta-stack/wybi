@@ -145,7 +145,7 @@ export default function PrivacyPage() {
 
         <h2>Questions</h2>
         <p>
-          Reach us at <a href="mailto:studiolimeta@gmail.com">studiolimeta@gmail.com</a> for anything about this
+          Reach us at <a href="mailto:support@wouldyoubuyit.app">support@wouldyoubuyit.app</a> for anything about this
           policy or your data.
         </p>
       </LegalPage>

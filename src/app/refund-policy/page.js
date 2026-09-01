@@ -53,7 +53,7 @@ export default function RefundPolicyPage() {
         <h2>Contact us</h2>
         <p>
           For help with access, duplicate charges, or a product issue, email{' '}
-          <a href="mailto:studiolimeta@gmail.com">studiolimeta@gmail.com</a>. Include the email address used at
+          <a href="mailto:support@wouldyoubuyit.app">support@wouldyoubuyit.app</a>. Include the email address used at
           checkout and your Paddle receipt or transaction reference if available. Do not send payment-card details.
         </p>
       </LegalPage>

@@ -143,7 +143,7 @@ export async function SiteFooter({ variant = 'full' }) {
               <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
               Secure checkout by Paddle
             </span>
-            <a href="mailto:studiolimeta@gmail.com" className="hover:text-white">
+            <a href="mailto:support@wouldyoubuyit.app" className="hover:text-white">
               Contact support
             </a>
           </div>

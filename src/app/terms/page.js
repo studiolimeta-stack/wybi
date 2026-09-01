@@ -99,7 +99,7 @@ export default function TermsPage() {
 
         <h2>Contact</h2>
         <p>
-          Questions about these terms: <a href="mailto:studiolimeta@gmail.com">studiolimeta@gmail.com</a>.
+          Questions about these terms: <a href="mailto:support@wouldyoubuyit.app">support@wouldyoubuyit.app</a>.
         </p>
       </LegalPage>
       <SiteFooter />

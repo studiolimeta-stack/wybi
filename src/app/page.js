@@ -281,7 +281,7 @@ export default function HomePage() {
               <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-white/75 sm:text-lg">
                 Set up a test in 30 seconds, share one link, and get a clear signal from real people before you launch.
               </p>
-              <Link href="/create" className="btn mt-7 w-full border-accent bg-accent text-white sm:w-auto">
+              <Link href="/create" className="btn mt-7 w-full border-white bg-accent text-white sm:w-auto">
                 Create your free price test
               </Link>
               <p className="mt-4 text-sm font-medium text-white/65">

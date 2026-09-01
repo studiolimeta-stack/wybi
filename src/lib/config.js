@@ -98,10 +98,11 @@ export const config = {
    * Checkout itself runs client-side via Paddle.js against `clientToken` +
    * `unlockPriceId`; confirmation comes from the `transaction.completed`
    * webhook at /api/webhooks/paddle, verified with `webhookSecret` — never
-   * from the client-side checkout.completed event alone. `apiKey` is not
-   * called anywhere yet (no server-initiated transactions or refunds today);
-   * it's captured now so a future admin refund action doesn't need a second
-   * credentials round trip.
+   * from the client-side checkout.completed event alone. `apiKey` powers one
+   * server-initiated call today — GET /transactions/{id}/invoice, used by
+   * /api/account/receipt/[paymentId] to hand a creator back to Paddle's own
+   * hosted PDF receipt — with a future admin refund action as the next
+   * likely caller.
    */
   paddle: {
     enabled: Boolean(
@@ -113,6 +114,10 @@ export const config = {
     // 'sandbox' | 'production' — must match which dashboard the other four
     // values were generated in, or Paddle.js/webhook verification just fails.
     environment: process.env.PADDLE_ENVIRONMENT || 'sandbox',
+    // Paddle splits its REST API across two hosts by environment — sandbox
+    // transactions 404 against the production host and vice versa.
+    apiBaseUrl:
+      process.env.PADDLE_ENVIRONMENT === 'production' ? 'https://api.paddle.com' : 'https://sandbox-api.paddle.com',
     apiKey: process.env.PADDLE_API_KEY || null,
     clientToken: process.env.PADDLE_CLIENT_TOKEN || null,
     webhookSecret: process.env.PADDLE_WEBHOOK_SECRET || null,

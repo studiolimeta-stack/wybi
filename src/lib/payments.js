@@ -72,3 +72,19 @@ export async function listPaymentsForUser(userId) {
   );
   return rows;
 }
+
+/**
+ * Single payment row, scoped to the requesting user — the ownership check
+ * `/api/account/receipt/[paymentId]` needs before it will ask Paddle for
+ * that transaction's invoice. `provider_payment_id` is Paddle's own
+ * transaction id (`txn_...`), not this row's own `id`.
+ */
+export async function getPaymentForUser(paymentId, userId) {
+  const { rows } = await query(
+    `SELECT id, provider, provider_payment_id
+     FROM payments
+     WHERE id = $1 AND user_id = $2 AND status = 'succeeded'`,
+    [paymentId, userId],
+  );
+  return rows[0] || null;
+}

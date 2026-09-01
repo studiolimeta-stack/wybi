@@ -41,6 +41,14 @@ export function BillingSummary({ tests, payments }) {
                   <p className="hint">
                     {new Date(p.created_at).toLocaleDateString()}
                     {p.provider === 'dev_mock' && ' · simulated, not a real charge'}
+                    {p.provider === 'paddle' && (
+                      <>
+                        {' · '}
+                        <a href={`/api/account/receipt/${p.id}`} className="underline" target="_blank" rel="noopener">
+                          Receipt
+                        </a>
+                      </>
+                    )}
                   </p>
                 </div>
                 <span className="shrink-0 font-bold tabular-nums">{formatPrice(p.amount, p.currency)}</span>

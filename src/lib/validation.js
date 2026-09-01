@@ -61,7 +61,7 @@ export function validateTestInput(body) {
   if (productUrl && !isSafeHttpUrl(productUrl)) {
     productUrl = productUrl.startsWith('http') ? productUrl : `https://${productUrl}`;
     if (!isSafeHttpUrl(productUrl)) {
-      errors.productUrl = 'That is not a working link. Use the full address, like https://myproduct.com.';
+      errors.productUrl = 'That is not a working link. Use the full address, like https://yourproduct.com.';
     }
   }
 

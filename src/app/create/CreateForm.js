@@ -200,7 +200,7 @@ export function CreateForm() {
             className="field"
             value={form.title}
             onChange={update('title')}
-            placeholder="InvoiceAI Pro"
+            placeholder="Your product or service name"
             maxLength={80}
             required
           />
@@ -217,7 +217,7 @@ export function CreateForm() {
             rows={3}
             value={form.description}
             onChange={update('description')}
-            placeholder="An invoicing tool for freelancers that automatically categorises expenses."
+            placeholder="What are you offering, and who is it for?"
             maxLength={400}
             required
           />
@@ -234,7 +234,7 @@ export function CreateForm() {
             rows={4}
             value={form.includedItems}
             onChange={update('includedItems')}
-            placeholder={'Unlimited invoices\n5 users\nAI categorisation\nPDF export'}
+            placeholder={"What's included — one item per line"}
             maxLength={600}
           />
           <p className="hint mt-1">One per line.</p>
@@ -358,7 +358,7 @@ export function CreateForm() {
             className="field"
             value={form.productUrl}
             onChange={update('productUrl')}
-            placeholder="https://myproduct.com"
+            placeholder="https://yourproduct.com"
             maxLength={500}
           />
           {errors.productUrl && <p className="err">{errors.productUrl}</p>}

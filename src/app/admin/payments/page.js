@@ -53,22 +53,31 @@ export default async function AdminPaymentsPage({ searchParams }) {
   const grossText = eur.grossKnown ? approx(eur.gross) : '—';
   const feeText = eur.feeKnown ? approx(eur.fee) : '—';
   const netText = eur.earningsKnown ? approx(eur.earnings) : '—';
-  // A ratio, not an amount — blended fee against the SAME (EUR-normalised) row
-  // set the fee total came from (real Paddle transactions with a known fee),
-  // not the overall gross, which includes dev_mock's zero-fee rows and would
-  // understate the real rate.
-  const rateText = eur.feeKnown && eur.feeGross > 0
-    ? `${((eur.fee / eur.feeGross) * 100).toFixed(1)}%`
+  const vatText = eur.taxKnown ? approx(eur.tax) : '—';
+  // A ratio, not an amount: of every euro a customer pays, how much actually
+  // reaches us once Paddle's VAT and fee come out. Divided against the gross
+  // of the SAME (EUR-normalised) row set the earnings total came from, never
+  // the overall gross — a denominator including rows with no earnings figure
+  // would understate the rate. Replaced the old fee-against-gross "blended
+  // fee rate", which mixed a VAT-inclusive denominator with a fee numerator
+  // and so answered no question anyone actually has.
+  const takeHomeText = eur.earningsKnown && eur.earningsGross > 0
+    ? `${((eur.earnings / eur.earningsGross) * 100).toFixed(1)}%`
     : '—';
 
+  // Live-account tile set. There is deliberately no "real (Paddle)" or
+  // "dev-mode (test)" count any more: `POST /api/tests/[token]/unlock` hard
+  // 400s whenever Paddle is enabled, so in production every payment is a real
+  // Paddle one — the two counts were always equal and always 0 respectively,
+  // which is three tiles spending space to say one number. A dev_mock row
+  // appearing at all is now an anomaly, surfaced as a warning below instead.
   const statTiles = [
-    { label: 'Succeeded', value: paymentSummary.succeeded_count },
-    { label: 'Real (Paddle)', value: paymentSummary.paddle_count },
-    { label: 'Dev-mode (test)', value: paymentSummary.mock_count },
-    { label: 'Gross revenue (EUR)', value: grossText },
+    { label: 'Payments', value: paymentSummary.succeeded_count },
+    { label: 'Gross incl. VAT (EUR)', value: grossText },
+    { label: 'VAT (EUR)', value: vatText },
     { label: 'Paddle fees (EUR)', value: feeText },
     { label: 'Net earnings (EUR)', value: netText },
-    { label: 'Blended fee rate', value: rateText },
+    { label: 'You keep', value: takeHomeText },
   ];
 
   return (
@@ -99,12 +108,26 @@ export default async function AdminPaymentsPage({ searchParams }) {
             shows each charge in the currency the customer was actually billed. Paddle holds the authoritative ledger.
           </p>
         )}
+        <p className="hint">
+          Gross is what customers were billed and includes the VAT Paddle charges on top and remits — that is never
+          ours, which is why it is broken out rather than left as an unexplained gap between gross and net.
+          Gross = VAT + fees + net earnings.
+        </p>
         {paymentSummary.paddle_missing_earnings_count > 0 && (
           <p className="hint">
-            <code>provider = &apos;dev_mock&apos;</code> rows are simulated unlocks, not real revenue —{' '}
-            {paymentSummary.paddle_missing_earnings_count} earlier real transaction
+            {paymentSummary.paddle_missing_earnings_count} real transaction
             {paymentSummary.paddle_missing_earnings_count === 1 ? '' : 's'} predate fee/earnings tracking and{' '}
-            {paymentSummary.paddle_missing_earnings_count === 1 ? 'is' : 'are'} excluded from the stats above.
+            {paymentSummary.paddle_missing_earnings_count === 1 ? 'is' : 'are'} excluded from the VAT, fee, net and
+            rate tiles above — they still count in Payments and gross.
+          </p>
+        )}
+        {paymentSummary.mock_count > 0 && (
+          <p className="hint">
+            <strong>{paymentSummary.mock_count} simulated <code>dev_mock</code> unlock
+            {paymentSummary.mock_count === 1 ? '' : 's'} in the table.</strong> These are not real revenue and should
+            not exist on the live account — the unlock endpoint refuses them whenever Paddle is configured, so their
+            presence means this environment ran without Paddle enabled at some point. They are counted in Payments and
+            gross, but carry no fee/earnings and so are excluded from the VAT, fee, net and rate tiles.
           </p>
         )}
 

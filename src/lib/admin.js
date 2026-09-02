@@ -233,13 +233,17 @@ export async function countPaymentsForAdmin() {
  * stays absent from the list rather than rendering a misleading $0.
  */
 export async function getPaymentSummary() {
-  const [totals, earningsTotals, feeTotals, counts, rateInfo] = await Promise.all([
+  const [totals, earningsTotals, feeTotals, taxTotals, counts, rateInfo] = await Promise.all([
     query(`
       SELECT currency, COALESCE(SUM(amount), 0) AS total
       FROM payments WHERE status = 'succeeded'
       GROUP BY currency ORDER BY total DESC`),
+    // `gross` is scoped to the same rows as `total` (earnings), for the same
+    // numerator/denominator reason as the fee query below — it backs the
+    // take-home rate tile, which would be wrong if divided against a gross
+    // that included rows with no earnings figure.
     query(`
-      SELECT currency, SUM(earnings) AS total, COUNT(earnings)::int AS known_count
+      SELECT currency, SUM(earnings) AS total, SUM(amount) AS gross, COUNT(earnings)::int AS known_count
       FROM payments WHERE status = 'succeeded' AND provider = 'paddle'
       GROUP BY currency HAVING SUM(earnings) IS NOT NULL ORDER BY total DESC`),
     // `gross` here is scoped to the SAME row set as `total` (fee) — real
@@ -250,6 +254,21 @@ export async function getPaymentSummary() {
     query(`
       SELECT currency, SUM(fee) AS total, SUM(amount) AS gross, COUNT(*)::int AS known_count
       FROM payments WHERE status = 'succeeded' AND provider = 'paddle' AND fee IS NOT NULL
+      GROUP BY currency ORDER BY total DESC`),
+    // VAT/sales tax, derived rather than stored. Paddle is Merchant of Record,
+    // so the tax is charged on top, remitted by Paddle, and never ours — but
+    // it IS inside `amount` (what the customer was billed). Without this the
+    // tiles silently fail to reconcile: gross - fee != earnings, and the
+    // missing slice looks like unexplained shrinkage. Derived as
+    // amount - fee - earnings over rows where BOTH are known, so numerator
+    // and denominator come from one consistent row set. Identity holds for
+    // this product (single price, no discounts/credits); if coupons are ever
+    // added, store Paddle's explicit `details.totals.tax` instead of this.
+    query(`
+      SELECT currency, SUM(amount - fee - earnings) AS total, SUM(amount) AS gross
+      FROM payments
+      WHERE status = 'succeeded' AND provider = 'paddle'
+        AND fee IS NOT NULL AND earnings IS NOT NULL
       GROUP BY currency ORDER BY total DESC`),
     query(`
       SELECT COUNT(*) FILTER (WHERE status = 'succeeded')::int AS succeeded_count,
@@ -266,13 +285,19 @@ export async function getPaymentSummary() {
     totals: totals.rows,
     earningsTotals: earningsTotals.rows,
     feeTotals: feeTotals.rows,
+    taxTotals: taxTotals.rows,
     // Single-currency (EUR) rollup for the dashboard tiles — the per-currency
     // arrays above still back the per-row table, which stays in real charged
     // currency. Rates are live ECB daily reference rates (lib/fx.js);
     // `ratesAsOf`/`ratesLive` let the page word the conversion footnote.
     eur: {
       ...summarisePaymentsEur(
-        { totals: totals.rows, feeTotals: feeTotals.rows, earningsTotals: earningsTotals.rows },
+        {
+          totals: totals.rows,
+          feeTotals: feeTotals.rows,
+          earningsTotals: earningsTotals.rows,
+          taxTotals: taxTotals.rows,
+        },
         rateInfo.rates,
       ),
       ratesAsOf: rateInfo.asOf,

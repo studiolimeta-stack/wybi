@@ -56,17 +56,24 @@ export function toEur(amount, currency, rates = FX_TO_EUR_FALLBACK) {
  * map is skipped (its money is left out of the total rather than counted at
  * the wrong value); `hasUnknownRate` flags it.
  */
-export function summarisePaymentsEur({ totals = [], feeTotals = [], earningsTotals = [] } = {}, rates = FX_TO_EUR_FALLBACK) {
+export function summarisePaymentsEur({ totals = [], feeTotals = [], earningsTotals = [], taxTotals = [] } = {}, rates = FX_TO_EUR_FALLBACK) {
   const sum = (rows, field) => rows.reduce((acc, r) => acc + (toEur(r[field], r.currency, rates) ?? 0), 0);
-  const currencies = new Set([...totals, ...feeTotals, ...earningsTotals].map((r) => r.currency));
+  const currencies = new Set([...totals, ...feeTotals, ...earningsTotals, ...taxTotals].map((r) => r.currency));
   return {
     gross: sum(totals, 'total'),
     fee: sum(feeTotals, 'total'),
     feeGross: sum(feeTotals, 'gross'),
     earnings: sum(earningsTotals, 'total'),
+    // Denominator for the take-home rate: gross over the same rows the
+    // earnings figure came from, never the overall gross.
+    earningsGross: sum(earningsTotals, 'gross'),
+    // VAT/sales tax Paddle charged on top and remits — inside `gross`, never
+    // ours. Present so the tiles reconcile: gross = tax + fee + earnings.
+    tax: sum(taxTotals, 'total'),
     grossKnown: totals.length > 0,
     feeKnown: feeTotals.length > 0,
     earningsKnown: earningsTotals.length > 0,
+    taxKnown: taxTotals.length > 0,
     // Every contributing row is already in EUR — the tiles are exact, drop the "≈".
     exact: currencies.size > 0 && [...currencies].every((c) => c === 'EUR'),
     hasUnknownRate: [...currencies].some((c) => rates[c] == null),

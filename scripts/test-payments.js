@@ -38,8 +38,12 @@ test('summarisePaymentsEur collapses a mixed-currency table into one EUR figure'
       { currency: 'EUR', total: '1.07', gross: '12.87' },
     ],
     earningsTotals: [
-      { currency: 'USD', total: '21' },
-      { currency: 'EUR', total: '9.23' },
+      { currency: 'USD', total: '21', gross: '30' },
+      { currency: 'EUR', total: '9.23', gross: '12.87' },
+    ],
+    taxTotals: [
+      { currency: 'USD', total: '6.50', gross: '30' },
+      { currency: 'EUR', total: '2.57', gross: '12.87' },
     ],
   }, RATES);
 
@@ -47,6 +51,9 @@ test('summarisePaymentsEur collapses a mixed-currency table into one EUR figure'
   assert.equal(summary.fee, 2.5 * 0.9 + 1.07);
   assert.equal(summary.feeGross, 30 * 0.9 + 12.87);
   assert.equal(summary.earnings, 21 * 0.9 + 9.23);
+  assert.equal(summary.earningsGross, 30 * 0.9 + 12.87);
+  assert.equal(summary.tax, 6.5 * 0.9 + 2.57);
+  assert.equal(summary.taxKnown, true);
   assert.equal(summary.grossKnown, true);
   assert.equal(summary.feeKnown, true);
   assert.equal(summary.earningsKnown, true);
@@ -81,8 +88,27 @@ test('summarisePaymentsEur reports nothing-known on an empty table', () => {
   assert.equal(summary.grossKnown, false);
   assert.equal(summary.feeKnown, false);
   assert.equal(summary.earningsKnown, false);
+  assert.equal(summary.taxKnown, false);
   assert.equal(summary.gross, 0);
+  assert.equal(summary.tax, 0);
   assert.equal(summary.exact, false);
+});
+
+// The whole point of breaking VAT out as its own tile: the money tiles have to
+// add up. A real live transaction (12.87 EUR gross, 1.07 fee, 9.23 earnings)
+// leaves 2.57 unaccounted for unless VAT is shown — that gap read as
+// unexplained shrinkage on the admin dashboard before this existed.
+test('summarisePaymentsEur tiles reconcile: gross = tax + fee + earnings', () => {
+  const summary = summarisePaymentsEur({
+    totals: [{ currency: 'EUR', total: '12.87' }],
+    feeTotals: [{ currency: 'EUR', total: '1.07', gross: '12.87' }],
+    earningsTotals: [{ currency: 'EUR', total: '9.23', gross: '12.87' }],
+    taxTotals: [{ currency: 'EUR', total: '2.57', gross: '12.87' }],
+  }, RATES);
+
+  assert.ok(Math.abs(summary.gross - (summary.tax + summary.fee + summary.earnings)) < 1e-9);
+  // ...and the take-home rate the page renders off these figures.
+  assert.equal(((summary.earnings / summary.earningsGross) * 100).toFixed(1), '71.7');
 });
 
 const ECB_SAMPLE = `<?xml version="1.0" encoding="UTF-8"?>

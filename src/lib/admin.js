@@ -1,6 +1,8 @@
 import { timingSafeEqual } from 'node:crypto';
 import { query } from './db.js';
 import { config } from './config.js';
+import { summarisePaymentsEur } from './pricing.js';
+import { ratesToEur } from './fx.js';
 
 /**
  * Admin-only read queries. Kept separate from lib/tests.js and lib/auth.js
@@ -231,7 +233,7 @@ export async function countPaymentsForAdmin() {
  * stays absent from the list rather than rendering a misleading $0.
  */
 export async function getPaymentSummary() {
-  const [totals, earningsTotals, feeTotals, counts] = await Promise.all([
+  const [totals, earningsTotals, feeTotals, counts, rateInfo] = await Promise.all([
     query(`
       SELECT currency, COALESCE(SUM(amount), 0) AS total
       FROM payments WHERE status = 'succeeded'
@@ -256,6 +258,7 @@ export async function getPaymentSummary() {
              COUNT(*) FILTER (WHERE provider = 'paddle' AND status = 'succeeded' AND earnings IS NULL)::int
                AS paddle_missing_earnings_count
       FROM payments`),
+    ratesToEur(),
   ]);
 
   return {
@@ -263,5 +266,17 @@ export async function getPaymentSummary() {
     totals: totals.rows,
     earningsTotals: earningsTotals.rows,
     feeTotals: feeTotals.rows,
+    // Single-currency (EUR) rollup for the dashboard tiles — the per-currency
+    // arrays above still back the per-row table, which stays in real charged
+    // currency. Rates are live ECB daily reference rates (lib/fx.js);
+    // `ratesAsOf`/`ratesLive` let the page word the conversion footnote.
+    eur: {
+      ...summarisePaymentsEur(
+        { totals: totals.rows, feeTotals: feeTotals.rows, earningsTotals: earningsTotals.rows },
+        rateInfo.rates,
+      ),
+      ratesAsOf: rateInfo.asOf,
+      ratesLive: rateInfo.live,
+    },
   };
 }

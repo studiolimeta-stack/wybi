@@ -41,33 +41,33 @@ export default async function AdminPaymentsPage({ searchParams }) {
       dir: sort === nextSort && direction === 'asc' ? 'desc' : 'asc',
     });
 
-  // Every money stat is broken down by currency, never summed across them —
-  // same discipline as the table itself: `$14.90 + €14.90` joined as text is
-  // honest, a single figure adding them together is not.
-  const grossText = paymentSummary.totals.length
-    ? paymentSummary.totals.map((t) => formatPrice(t.total, t.currency)).join(' + ')
-    : '—';
-  const feeText = paymentSummary.feeTotals.length
-    ? paymentSummary.feeTotals.map((t) => formatPrice(t.total, t.currency)).join(' + ')
-    : '—';
-  const netText = paymentSummary.earningsTotals.length
-    ? paymentSummary.earningsTotals.map((t) => formatPrice(t.total, t.currency)).join(' + ')
-    : '—';
-  // A ratio, not an amount — safe as one blended figure PER currency (never
-  // combining two currencies' fee/gross into one division), computed against
-  // the SAME row set feeTotals.total came from, not the overall gross (which
-  // would include dev_mock's zero-fee rows and understate the real rate).
-  const rateText = paymentSummary.feeTotals.length
-    ? paymentSummary.feeTotals.map((t) => `${((Number(t.total) / Number(t.gross)) * 100).toFixed(1)}%`).join(' + ')
+  // The tiles show ONE currency (EUR). Paddle bills each buyer in their own
+  // local currency, so `payments` holds a mix (USD, EUR, …) — summing those
+  // raw would be nonsense, but showing "$29.80 + €12.87" stops being useful
+  // the moment there's more than one currency in play. So the per-currency
+  // rows are collapsed into a single euro figure at live ECB daily reference
+  // rates (lib/fx.js → lib/pricing.js summarisePaymentsEur). The per-row
+  // Payments table below still shows every charge in its real currency.
+  const { eur } = paymentSummary;
+  const approx = (amount) => `${eur.exact ? '' : '≈ '}${formatPrice(amount, 'EUR')}`;
+  const grossText = eur.grossKnown ? approx(eur.gross) : '—';
+  const feeText = eur.feeKnown ? approx(eur.fee) : '—';
+  const netText = eur.earningsKnown ? approx(eur.earnings) : '—';
+  // A ratio, not an amount — blended fee against the SAME (EUR-normalised) row
+  // set the fee total came from (real Paddle transactions with a known fee),
+  // not the overall gross, which includes dev_mock's zero-fee rows and would
+  // understate the real rate.
+  const rateText = eur.feeKnown && eur.feeGross > 0
+    ? `${((eur.fee / eur.feeGross) * 100).toFixed(1)}%`
     : '—';
 
   const statTiles = [
     { label: 'Succeeded', value: paymentSummary.succeeded_count },
     { label: 'Real (Paddle)', value: paymentSummary.paddle_count },
     { label: 'Dev-mode (test)', value: paymentSummary.mock_count },
-    { label: 'Gross revenue', value: grossText },
-    { label: 'Paddle fees', value: feeText },
-    { label: 'Net earnings', value: netText },
+    { label: 'Gross revenue (EUR)', value: grossText },
+    { label: 'Paddle fees (EUR)', value: feeText },
+    { label: 'Net earnings (EUR)', value: netText },
     { label: 'Blended fee rate', value: rateText },
   ];
 
@@ -89,6 +89,16 @@ export default async function AdminPaymentsPage({ searchParams }) {
           * this app can show, not Paddle's own ledger. It won't reflect
           * refunds/adjustments, which this API key also can't currently read
           * (403 on /adjustments). */}
+        {!eur.exact && (
+          <p className="hint">
+            Totals above are shown in euro, converting charges made in other currencies at{' '}
+            {eur.ratesLive && eur.ratesAsOf
+              ? `ECB reference rates (as of ${eur.ratesAsOf})`
+              : 'approximate fallback rates (live ECB rates were unavailable)'}
+            {eur.hasUnknownRate ? '; any currency with no rate on file is left out' : ''}. The Payments table below
+            shows each charge in the currency the customer was actually billed. Paddle holds the authoritative ledger.
+          </p>
+        )}
         {paymentSummary.paddle_missing_earnings_count > 0 && (
           <p className="hint">
             <code>provider = &apos;dev_mock&apos;</code> rows are simulated unlocks, not real revenue —{' '}

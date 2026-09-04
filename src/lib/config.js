@@ -151,7 +151,22 @@ export const config = {
    */
   analytics: {
     enabled: process.env.APP_URL === 'https://wouldyoubuyit.app',
-    scriptUrl: 'https://mario-umami.crhq.ai/script.js',
+    /**
+     * Served first-party via nginx (exact-match `/stats/script.js` and
+     * `/stats/api/send` -> 127.0.0.1:4004; everything else under /stats/ 404s), NOT
+     * from https://mario-umami.crhq.ai. That subdomain resolves to the shared
+     * Control Room gateway, which forwards here without an X-Forwarded-For
+     * header, so nginx stamped the gateway's own IP as the client and Umami
+     * geolocated every visitor to Falkenstein (the gateway's location) —
+     * diagnosed 2026-09-04. wouldyoubuyit.app resolves straight to this VPS, so
+     * a same-origin beacon gives Umami the real visitor IP. See the nginx block
+     * for why that vhost overwrites (not appends) X-Forwarded-For.
+     *
+     * Umami's tracker derives its collection endpoint from this script's own
+     * URL when no data-host-url is set, so `/stats/script.js` automatically
+     * posts to `/stats/api/send`. Keep the path prefix on both or it breaks.
+     */
+    scriptUrl: '/stats/script.js',
     websiteId: UMAMI_WEBSITE_ID,
   },
 

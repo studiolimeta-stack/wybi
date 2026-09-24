@@ -1,0 +1,17 @@
+-- Human-readable respondent URLs: /t/human-mode alongside /t/MUCYEBK.
+--
+-- ADDITIVE, never a replacement. `slug` (the random 7-char code) stays the
+-- permanent identity of a test: every link already shared, bookmarked or
+-- pasted into a newsletter keeps resolving forever. `pretty_slug` is a second
+-- door to the same room, nullable because a test whose title yields no usable
+-- ASCII (all emoji, all CJK) simply doesn't get one.
+--
+-- Kept under /t/ deliberately rather than at the top level: a top-level
+-- namespace would put every test name in competition with every current and
+-- future route (/create, /login, /pricing...), so shipping a new page could
+-- silently shadow a live test link. /t/ walls the two apart permanently.
+--
+-- The two columns can never collide by construction: `slug` is drawn from an
+-- uppercase-only alphabet (no look-alikes), `pretty_slug` is lowercase ASCII,
+-- digits and hyphens only. So a single lookup against both is unambiguous.
+ALTER TABLE tests ADD COLUMN IF NOT EXISTS pretty_slug TEXT UNIQUE;

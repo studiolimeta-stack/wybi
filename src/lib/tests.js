@@ -1,6 +1,37 @@
 import { query, transaction } from './db.js';
-import { generateSlug, generateCreatorToken } from './ids.js';
+import { generateSlug, generateCreatorToken, derivePrettySlug } from './ids.js';
 import { config } from './config.js';
+
+/**
+ * Pick the readable half of a test's URL: "HUMAN MODE" -> "human-mode", and
+ * "human-mode-2" if a test of that name already exists.
+ *
+ * Reads the taken names in one query rather than insert-and-retry, because a
+ * failed INSERT aborts the surrounding transaction in Postgres — and unlike a
+ * random-slug collision (1 in 27 billion), two tests sharing a title is an
+ * ordinary thing that will happen. The UNIQUE constraint stays as the backstop
+ * for the narrow race where two identically-titled tests are created in the
+ * same instant; that surfaces as a visible "try again", never a wrong URL.
+ *
+ * Returns null when the title yields nothing usable, which is fine: `slug`,
+ * the random code, is a test's real and permanent identity.
+ */
+async function allocatePrettySlug(client, title) {
+  const base = derivePrettySlug(title);
+  if (!base) return null;
+
+  const { rows } = await client.query(
+    "SELECT pretty_slug FROM tests WHERE pretty_slug = $1 OR pretty_slug LIKE $1 || '-%'",
+    [base],
+  );
+  const taken = new Set(rows.map((r) => r.pretty_slug));
+  if (!taken.has(base)) return base;
+
+  for (let n = 2; n <= 999; n += 1) {
+    if (!taken.has(`${base}-${n}`)) return `${base}-${n}`;
+  }
+  return null;
+}
 
 /**
  * `sessionUserId`, when the creator is already logged in, owns the test
@@ -14,6 +45,7 @@ import { config } from './config.js';
 export async function createTest(input, { sessionUserId = null } = {}) {
   return transaction(async (client) => {
     const userId = sessionUserId;
+    const prettySlug = await allocatePrettySlug(client, input.title);
 
     // Slug collisions are astronomically unlikely but cheap to retry.
     let test = null;
@@ -21,14 +53,15 @@ export async function createTest(input, { sessionUserId = null } = {}) {
       try {
         const { rows } = await client.query(
           `INSERT INTO tests
-             (user_id, slug, creator_token, title, description, included_items,
+             (user_id, slug, pretty_slug, creator_token, title, description, included_items,
               image_url, image_urls, product_url, currency, billing_type,
               ask_suggested_price, ask_confidence, free_response_limit)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10,$11,$12,$13,$14)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10,$11,$12,$13,$14,$15)
            RETURNING *`,
           [
             userId,
             generateSlug(),
+            prettySlug,
             generateCreatorToken(),
             input.title,
             input.description,
@@ -62,9 +95,33 @@ export async function createTest(input, { sessionUserId = null } = {}) {
   });
 }
 
+/**
+ * Resolves either half of a test's URL — the permanent random code
+ * (/t/MUCYEBK) or the readable name (/t/human-mode). Both serve the page
+ * directly; neither redirects to the other, because `/t/` is noindex and
+ * robots-disallowed, so there is no canonical to consolidate and a redirect
+ * would only add a round trip to the one page where a slow load is a lost
+ * response.
+ *
+ * The two columns cannot collide: random codes are uppercase-only, pretty
+ * slugs lowercase-only. `lower()` on the pretty side so a link retyped by
+ * hand as /t/Human-Mode still lands.
+ */
 export async function getTestBySlug(slug) {
-  const { rows } = await query('SELECT * FROM tests WHERE slug = $1', [slug]);
+  const { rows } = await query(
+    'SELECT * FROM tests WHERE slug = $1 OR pretty_slug = lower($1)',
+    [slug],
+  );
   return rows[0] ?? null;
+}
+
+/**
+ * The slug to put in front of a human: the readable one when a test has it,
+ * the random code otherwise. Never used to look a test up — only to build a
+ * URL — since both forms resolve.
+ */
+export function publicSlug(test) {
+  return test?.pretty_slug || test?.slug || null;
 }
 
 export async function getTestByCreatorToken(token) {
@@ -95,7 +152,9 @@ export async function getTestByCreatorToken(token) {
 export function publicTestView(test) {
   if (!test) return null;
   return {
-    slug: test.slug,
+    // The readable slug when there is one. Not a new disclosure: it is
+    // derived from the title, which this same projection already returns.
+    slug: publicSlug(test),
     title: test.title,
     description: test.description,
     included_items: test.included_items,

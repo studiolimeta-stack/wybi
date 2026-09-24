@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getTestByCreatorToken, getPriceVariants } from '../../../lib/tests.js';
+import { publicSlug, getTestByCreatorToken, getPriceVariants } from '../../../lib/tests.js';
 import { SiteHeader, SiteFooter } from '../../../components/SiteChrome.js';
 import { ShareBox } from '../../../components/ShareBox.js';
 import { ResultsLinkActions } from './ResultsLinkActions.js';
@@ -16,7 +16,7 @@ export default async function CreatedPage({ params }) {
   if (!test) notFound();
 
   const variants = await getPriceVariants(test.id);
-  const shareUrl = `${config.appUrl}/t/${test.slug}`;
+  const shareUrl = `${config.appUrl}/t/${publicSlug(test)}`;
   const resultsPath = `/r/${test.creator_token}`;
   const resultsUrl = `${config.appUrl}${resultsPath}`;
   const user = await currentUser();
@@ -36,7 +36,7 @@ export default async function CreatedPage({ params }) {
         </p>
 
         <div className="mt-7 space-y-5">
-          <ShareBox shareUrl={shareUrl} title={test.title} />
+          <ShareBox shareUrl={shareUrl} title={test.title} slug={publicSlug(test)} />
 
           <div className="card p-6">
             <p className="label">Prices being tested</p>

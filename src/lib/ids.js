@@ -54,3 +54,52 @@ export function deviceTypeFrom(userAgent = '') {
   if (/ipad|tablet/i.test(userAgent)) return 'tablet';
   return 'desktop';
 }
+
+/**
+ * Words that must never become a pretty slug, because `/t/<word>` either is,
+ * or could later become, a real route segment under /t/.
+ */
+const RESERVED_PRETTY_SLUGS = new Set(['opengraph-image', 'twitter-image', 'icon', 'apple-icon', 'new', 'edit', 'preview']);
+
+/**
+ * Turn an offer title into a readable URL segment: "HUMAN MODE" -> "human-mode".
+ *
+ * Derived from the title on purpose, never free text typed by the creator.
+ * The respondent page is a measurement instrument — no logo, no colour on the
+ * answer buttons, nothing that nudges an answer — and a hand-written slug
+ * ("worth-it", "only-9-bucks") would put sales copy in the address bar above
+ * the fold on every respondent's screen. A title-derived slug shows them
+ * nothing they aren't already reading in the <h1>.
+ *
+ * Returns null when the title yields nothing usable (all emoji, all CJK), in
+ * which case the test keeps only its random code — a missing pretty slug is
+ * always safe, since `slug` is the real identity.
+ */
+export function derivePrettySlug(title, { maxLength = 60 } = {}) {
+  if (!title) return null;
+
+  const base = title
+    .normalize('NFD')
+    // Strip diacritics so "Čaša" -> "casa" rather than dropping the letters
+    // outright — Croatian/German/French titles are a first-class case here.
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[đĐ]/g, 'd')
+    .replace(/[øØ]/g, 'o')
+    .replace(/[ßẞ]/g, 'ss')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  if (!base) return null;
+
+  // Trim to a whole word rather than mid-syllable, then re-trim any hyphen
+  // the cut left dangling.
+  let slug = base.slice(0, maxLength).replace(/-+$/g, '');
+  if (base.length > maxLength && slug.includes('-')) {
+    const lastHyphen = slug.lastIndexOf('-');
+    if (lastHyphen >= maxLength / 2) slug = slug.slice(0, lastHyphen);
+  }
+
+  if (!slug || RESERVED_PRETTY_SLUGS.has(slug)) return null;
+  return slug;
+}

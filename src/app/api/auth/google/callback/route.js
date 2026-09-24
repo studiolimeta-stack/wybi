@@ -3,6 +3,7 @@ import { verifyState, findOrCreateUserByIdentity, safeRedirect } from '../../../
 import { startSession, claimTestsFromCookie } from '../../../../../lib/session.js';
 import { clientIp, hashIp } from '../../../../../lib/ids.js';
 import { track } from '../../../../../lib/events.js';
+import { readVisitorId } from '../../../../../lib/visitor.js';
 
 export const runtime = 'nodejs';
 
@@ -72,8 +73,13 @@ export async function GET(request) {
     await startSession(user.id, { userAgent: request.headers.get('user-agent'), ipHash });
     const claimed = await claimTestsFromCookie(user.id);
 
-    await track(created ? 'account_created' : 'login_completed', { props: { provider: 'google' } });
-    if (claimed > 0) await track('test_claimed', { props: { count: claimed } });
+    await track(created ? 'account_created' : 'login_completed', {
+      visitorId: await readVisitorId(),
+      props: { provider: 'google' },
+    });
+    if (claimed > 0) {
+      await track('test_claimed', { visitorId: await readVisitorId(), props: { count: claimed } });
+    }
 
     return Response.redirect(new URL(safeRedirect(state.next), config.appUrl).toString(), 302);
   } catch (err) {

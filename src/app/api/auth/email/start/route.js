@@ -4,6 +4,7 @@ import { checkRateLimit } from '../../../../../lib/tests.js';
 import { clientIp, hashIp } from '../../../../../lib/ids.js';
 import { sendMail, magicLinkEmail, alertOpsOfSendFailure } from '../../../../../lib/mailer.js';
 import { track } from '../../../../../lib/events.js';
+import { readVisitorId } from '../../../../../lib/visitor.js';
 
 export const runtime = 'nodejs';
 
@@ -29,7 +30,9 @@ export async function POST(request) {
 
   const next = safeRedirect(body.next);
   const mode = body.mode === 'signup' ? 'signup' : 'login';
-  await track('login_started', { props: { provider: 'email', mode } });
+  // No bot check needed here: this path is a POST from the client form, behind
+  // a rate limit, and requires JS to reach at all.
+  await track('login_started', { visitorId: await readVisitorId(), props: { provider: 'email', mode } });
 
   const token = await createLoginToken(email, { redirectTo: next, ipHash });
   const verifyUrl = new URL('/api/auth/email/verify', config.appUrl);

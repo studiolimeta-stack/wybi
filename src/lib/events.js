@@ -25,7 +25,6 @@ export const EVENT_NAMES = new Set([
   'results_viewed',
   'paywall_viewed',
   'report_unlocked',
-  'result_shared',
   'viral_cta_clicked',
   'respondent_share_clicked',
   'login_started',
@@ -75,4 +74,41 @@ export async function track(name, { testId = null, visitorId = null, props = nul
   } catch (err) {
     console.error(`event_write_failed name=${name} testId=${testId}: ${err.message}`);
   }
+}
+
+/**
+ * Did this request come from a person clicking a link, or from a crawler
+ * walking it?
+ *
+ * `login_started` is the only funnel event fired from a plain GET route
+ * (/api/auth/google/start), because the "Continue with Google" button is an
+ * <a href> that has to leave the site. That makes it the one event a crawler
+ * can fire just by following a link on /login — and it did: on 2026-09-06 and
+ * 2026-09-09 seven `login_started` rows landed with no page render, no
+ * homepage_view and no Umami pageview anywhere near them, three of them inside
+ * five seconds alternating ?mode=login / ?mode=signup. That inflated the login
+ * funnel ~5x and made early traction impossible to read.
+ *
+ * A real browser navigation sends an HTML Accept header and, on anything new
+ * enough to implement Fetch Metadata, `Sec-Fetch-Mode: navigate`. HTTP-library
+ * crawlers send neither.
+ *
+ * Deliberately a blocklist, not an allowlist, and the Sec-Fetch test only
+ * applies when the header was sent at all (Safari < 16.4 omits it): a false
+ * negative costs one uncounted event, a false positive silently erases a real
+ * user from the funnel. Bias toward counting.
+ */
+const BOT_UA =
+  /bot|crawl|spider|slurp|headless|preview|scan|monitor|curl|wget|python-requests|httpx|go-http-client|axios|libwww|okhttp|fetch/i;
+
+export function isBrowserNavigation(headers) {
+  const ua = headers.get('user-agent') || '';
+  if (!ua || BOT_UA.test(ua)) return false;
+
+  if (!(headers.get('accept') || '').includes('text/html')) return false;
+
+  const mode = headers.get('sec-fetch-mode');
+  if (mode && mode !== 'navigate') return false;
+
+  return true;
 }

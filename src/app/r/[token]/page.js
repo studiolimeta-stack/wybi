@@ -1,3 +1,4 @@
+import { headers } from 'next/headers';
 import Link from 'next/link';
 import { ChevronDown, Eye } from 'lucide-react';
 import { notFound } from 'next/navigation';
@@ -17,9 +18,10 @@ import {
 } from '../../../components/ResultsBlocks.js';
 import { ManageTestMenu } from './ManageTestMenu.js';
 import { ShareTestButton } from './ShareTestButton.js';
-import { getTestByCreatorToken, getPriceVariants, getResponses, isReportLocked } from '../../../lib/tests.js';
+import { getTestByCreatorToken, getPriceVariants, getResponses, isReportLocked, publicSlug } from '../../../lib/tests.js';
 import { buildReport, computeAnswerRate, compareRecommendations } from '../../../lib/stats.js';
-import { track, getTestViewCount } from '../../../lib/events.js';
+import { track, getTestViewCount, isBrowserNavigation } from '../../../lib/events.js';
+import { readVisitorId } from '../../../lib/visitor.js';
 import { config } from '../../../lib/config.js';
 import { currentUser } from '../../../lib/session.js';
 import { UnlockButton } from './UnlockButton.js';
@@ -160,10 +162,29 @@ export default async function ResultsPage({ params }) {
   const user = await currentUser();
   const showClaimPrompt = Boolean(user && test.user_id === null);
 
-  await track('results_viewed', { testId: test.id });
-  if (locked) await track('paywall_viewed', { testId: test.id, props: { responses: responses.length } });
+  /*
+   * Both events carry the visitor id, because this page is force-dynamic and
+   * the creator reloads it constantly to watch answers arrive. Without an id
+   * there is no way to tell 40 visits by one creator from 40 creators, which
+   * made the paywall -> unlock conversion rate in /admin unreadable: the
+   * denominator grew every time somebody hit refresh.
+   *
+   * Bot-gated for the same reason as the respondent page — this link gets
+   * pasted to a co-founder, and the chat app fetches it to build a preview.
+   */
+  if (isBrowserNavigation(await headers())) {
+    const viewerId = await readVisitorId();
+    await track('results_viewed', { testId: test.id, visitorId: viewerId });
+    if (locked) {
+      await track('paywall_viewed', {
+        testId: test.id,
+        visitorId: viewerId,
+        props: { responses: responses.length },
+      });
+    }
+  }
 
-  const shareUrl = `${config.appUrl}/t/${test.slug}`;
+  const shareUrl = `${config.appUrl}/t/${publicSlug(test)}`;
 
   return (
     <>
@@ -210,9 +231,9 @@ export default async function ResultsPage({ params }) {
             * chevron icon) to pair with it — a fade alone will not read as
             * discoverable against this palette no matter how it's tuned. */}
           <div className="flex w-full flex-wrap items-center gap-2 pt-2 pb-3 sm:w-auto sm:flex-nowrap sm:pt-0 sm:pb-0">
-            <ShareTestButton shareUrl={shareUrl} title={test.title} />
+            <ShareTestButton shareUrl={shareUrl} title={test.title} slug={publicSlug(test)} />
             <Link
-              href={`/t/${test.slug}`}
+              href={`/t/${publicSlug(test)}`}
               target="_blank"
               className="btn btn-plain shrink-0 px-3 py-2 text-sm sm:px-4"
             >

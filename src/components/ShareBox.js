@@ -10,17 +10,22 @@ import { useState } from 'react';
  * test) and the "Share this test" modal on `/r/[token]` (every visit after
  * that) — same links, same tracked events, one implementation.
  */
-export function ShareBox({ shareUrl, title }) {
+export function ShareBox({ shareUrl, title, slug = null }) {
   const [copied, setCopied] = useState(false);
 
   const message = `I need an honest opinion 😄\n\nThinking about selling this — would you actually buy it?\n\nTakes 5 seconds:`;
 
   function report(event) {
-    // Fire-and-forget: analytics must never delay opening the share sheet.
+    // The slug matters: /api/events resolves it to a test_id, and without it
+    // every share click landed with test_id = NULL. That made the share events
+    // countable in aggregate but impossible to attribute — you could see that
+    // 30 shares happened and not which test caused them, which is the only
+    // question worth asking of a share metric. ShareTestLink always sent it;
+    // this component never did.
     fetch('/api/events', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: event }),
+      body: JSON.stringify(slug ? { name: event, slug } : { name: event }),
       keepalive: true,
     }).catch(() => {});
   }

@@ -17,7 +17,13 @@ export function proxy(request) {
 
   // Setting it on the request too makes it readable by this same render pass.
   request.cookies.set(VISITOR_COOKIE, visitorId);
-  const response = NextResponse.next({ request: { headers: request.headers } });
+  // Lets route handlers tell "first request ever from this browser" apart from
+  // a returning one (the cookie above is already visible to them either way).
+  // A person clicking "Continue with Google" has loaded a page first, so they
+  // arrive with the cookie; a scanner hitting the URL cold does not.
+  const headers = new Headers(request.headers);
+  headers.set('x-wyby-new-visitor', '1');
+  const response = NextResponse.next({ request: { headers } });
 
   response.cookies.set(VISITOR_COOKIE, visitorId, {
     httpOnly: true,

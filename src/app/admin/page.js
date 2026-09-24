@@ -42,6 +42,24 @@ function capTier(value, max) {
 }
 
 /**
+ * Note `login_completed` only fires for a RETURNING user — a brand-new signup
+ * fires `account_created` instead. Reading the two as one funnel
+ * (started -> completed) understates signups by definition, so both are always
+ * shown next to `login_started`.
+ */
+const AUTH_FUNNEL = ['login_started', 'login_completed', 'account_created'];
+
+function withAuthFunnelZeroes(rows) {
+  const seen = new Set(rows.map((row) => row.name));
+  const missing = AUTH_FUNNEL.filter((name) => !seen.has(name)).map((name) => ({
+    name,
+    n: 0,
+    visitors: 0,
+  }));
+  return [...rows, ...missing];
+}
+
+/**
  * The three funnel stages, in funnel order — never sorted by size, since the
  * whole point is that each is a subset of the one above it. `target` is null
  * for the first stage on purpose: there's no named goal for "got a response
@@ -102,7 +120,9 @@ async function loadOverview() {
       FROM tests`),
     query('SELECT COUNT(*)::int AS total FROM responses'),
     query(`
-      SELECT name, COUNT(*)::int AS n
+      SELECT name,
+             COUNT(*)::int AS n,
+             COUNT(DISTINCT visitor_id)::int AS visitors
       FROM events
       WHERE created_at > now() - interval '30 days'
       GROUP BY name ORDER BY n DESC`),
@@ -138,7 +158,13 @@ async function loadOverview() {
   return {
     tests: tests.rows[0],
     responses: responses.rows[0].total,
-    funnel: funnel.rows,
+    // An event that never fired has no row, so the events list silently omits
+    // it — which is exactly backwards for the auth funnel, where the number
+    // that matters most is the one sitting at zero. `account_created` missing
+    // from this list reads as "no data"; pinned at 0 it reads as "nobody has
+    // ever signed up", which is the actual finding. Pin the whole auth funnel
+    // so the three numbers can always be compared against each other.
+    funnel: withAuthFunnelZeroes(funnel.rows),
     reports: reports.rows,
     distribution: distribution.rows[0],
     emailsSentToday: emailsToday.rows[0].n,
@@ -264,12 +290,27 @@ export default async function AdminOverviewPage({ searchParams }) {
 
         <div className="card p-5">
           <h2 className="font-extrabold">Events — last 30 days</h2>
+          {/*
+            * Two numbers, never one. A raw event count answers "how many times
+            * did this happen", which is not the question anyone actually has —
+            * one creator reloading their results page 40 times and 40 creators
+            * each looking once produce the identical number. The second column
+            * is distinct visitors, which is the number to read.
+            *
+            * Shown as "—" rather than 0 where the event genuinely has no
+            * visitor attached (server-side events like email_sent), so an
+            * un-attributed event never reads as "nobody did this".
+            */}
+          <p className="hint mt-1">Times fired · how many different people</p>
           <div className="mt-2 grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2">
-            {data.funnel.length === 0 && <p className="text-muted">No events yet.</p>}
+            {!data.funnel.some((row) => row.n > 0) && <p className="text-muted">No events yet.</p>}
             {data.funnel.map((row) => (
-              <div key={row.name} className="flex justify-between border-b border-line py-1">
+              <div key={row.name} className="flex justify-between gap-3 border-b border-line py-1">
                 <span className="font-mono text-xs">{row.name}</span>
-                <strong className="tabular-nums">{row.n}</strong>
+                <span className="shrink-0 tabular-nums">
+                  <strong>{row.n}</strong>
+                  <span className="text-muted"> · {row.visitors > 0 ? row.visitors : '—'}</span>
+                </span>
               </div>
             ))}
           </div>

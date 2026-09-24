@@ -15,7 +15,7 @@ import { ShareBox } from '../../../components/ShareBox.js';
  * risk of a wide dropdown overflowing a narrow viewport depending on where in
  * the wrapped button row it happens to sit.
  */
-export function ShareTestButton({ shareUrl, title }) {
+export function ShareTestButton({ shareUrl, title, slug }) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -53,7 +53,7 @@ export function ShareTestButton({ shareUrl, title }) {
             >
               ✕
             </button>
-            <ShareBox shareUrl={shareUrl} title={title} />
+            <ShareBox shareUrl={shareUrl} title={title} slug={slug} />
           </div>
         </div>
       )}

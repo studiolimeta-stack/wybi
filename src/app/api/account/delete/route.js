@@ -1,5 +1,6 @@
 import { currentUser, endSession } from '../../../../lib/session.js';
 import { deleteUser } from '../../../../lib/auth.js';
+import { readVisitorId } from '../../../../lib/visitor.js';
 import { track } from '../../../../lib/events.js';
 
 export const runtime = 'nodejs';
@@ -10,7 +11,7 @@ export async function POST() {
 
   await deleteUser(user.id);
   await endSession();
-  await track('account_deleted');
+  await track('account_deleted', { visitorId: await readVisitorId() });
 
   return Response.json({ ok: true });
 }

@@ -1,6 +1,7 @@
 import { config } from '../../../../../lib/config.js';
 import { signState, safeRedirect } from '../../../../../lib/auth.js';
-import { track } from '../../../../../lib/events.js';
+import { track, isBrowserNavigation } from '../../../../../lib/events.js';
+import { readVisitorId } from '../../../../../lib/visitor.js';
 
 export const runtime = 'nodejs';
 
@@ -11,7 +12,18 @@ export async function GET(request) {
   const next = safeRedirect(url.searchParams.get('next'));
   const mode = url.searchParams.get('mode') === 'signup' ? 'signup' : 'login';
 
-  await track('login_started', { props: { provider: 'google', mode } });
+  // Crawlers follow the <a href> behind "Continue with Google" and used to be
+  // counted as real intent — see isBrowserNavigation for what that did to the
+  // funnel. They still get redirected normally; they just stop being counted.
+  // Also require a returning visitor: real users reach this link from a page
+  // on the site, so they already hold the visitor cookie. A cold first request
+  // (proxy.js flags it) is a scanner that got past the header checks.
+  if (isBrowserNavigation(request.headers) && !request.headers.get('x-wyby-new-visitor')) {
+    await track('login_started', {
+      visitorId: await readVisitorId(),
+      props: { provider: 'google', mode },
+    });
+  }
 
   // Not configured yet: send the same request through the real code path's
   // dev fallback rather than a different one — same session, same claiming,

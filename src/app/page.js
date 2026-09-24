@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
+import { ChevronDown } from 'lucide-react';
 import { SiteFooter } from '../components/SiteChrome.js';
 import { SiteHeaderStatic } from '../components/SiteHeaderStatic.js';
 import { CheckIcon } from '../components/CheckIcon.js';
@@ -71,6 +72,41 @@ const STEPS = [
   },
 ];
 
+const FAQS = [
+  {
+    q: 'How does Would You Buy It work?',
+    a: 'You describe your offer and add up to five prices to test. Each person who opens your shared link is shown exactly one of those prices, picked at random, and answers whether they’d buy at that price. Once enough people have answered, you get a report built from those real answers.',
+  },
+  {
+    q: 'Why does each person only see one price, not all of them?',
+    a: 'If people can compare prices side by side, they naturally pick the cheapest one — that’s price shopping, not purchase intent. Showing exactly one price per respondent removes the comparison, so what you get back is a cleaner signal of what people would actually pay.',
+  },
+  {
+    q: 'Is it free to create a test?',
+    a: `Yes. Creating and sharing a test costs nothing, and the first ${config.freeResponseLimit} responses on every test are free too. You only pay if and when you want the full, detailed report.`,
+  },
+  {
+    q: 'What do I get when I unlock the report?',
+    a: `Purchase intent at every price you tested, modelled revenue per price, the best-performing price, what the "no" respondents would have paid instead, and a full purchase-intent breakdown, plus a CSV export — for a one-time ${config.unlockCurrency} $${config.unlockPrice.toFixed(2)} per test.`,
+  },
+  {
+    q: 'Is this a subscription?',
+    a: 'No. There’s no subscription and no seat fees. You pay once, per test, only when you unlock that specific test’s report.',
+  },
+  {
+    q: 'How many responses do I need before I can trust the result?',
+    a: 'We flag it rather than guess: a recommendation needs at least 30 total responses and at least 8 per price you’re testing. Below that, we tell you it needs more responses instead of showing a number we don’t believe in yet.',
+  },
+  {
+    q: 'Do respondents need to sign up or share personal info?',
+    a: 'No. Answering is completely anonymous — no name, no email, no account. We only set one anonymous cookie on their browser so the same person can’t answer the same test twice.',
+  },
+  {
+    q: 'Can I get a refund after unlocking a report?',
+    a: 'A report is available immediately after payment, so purchases are generally final once it’s unlocked. If you were charged in error or charged twice, contact us and we’ll help — see the full Refund Policy for details.',
+  },
+];
+
 export default function HomePage() {
   const structuredData = {
     '@context': 'https://schema.org',
@@ -90,6 +126,14 @@ export default function HomePage() {
         description:
           'Create a price test, show each respondent one price, and see how purchase intent changes across prices.',
         isAccessibleForFree: true,
+      },
+      {
+        '@type': 'FAQPage',
+        mainEntity: FAQS.map((item) => ({
+          '@type': 'Question',
+          name: item.q,
+          acceptedAnswer: { '@type': 'Answer', text: item.a },
+        })),
       },
     ],
   };
@@ -238,6 +282,25 @@ export default function HomePage() {
                 Create a price test
               </Link>
             </div>
+          </div>
+        </section>
+
+        <section id="faq" className="scroll-mt-24 py-12 sm:py-14">
+          <div className="mx-auto max-w-2xl text-center">
+            <p className="section-label">Quick questions</p>
+            <h2 className="mt-2 text-3xl font-extrabold tracking-tight">Frequently asked questions.</h2>
+            <p className="mt-2 text-muted">Everything people usually ask before running their first price test.</p>
+          </div>
+          <div className="mx-auto mt-8 flex max-w-2xl flex-col gap-3">
+            {FAQS.map((item) => (
+              <details key={item.q} className="card group overflow-hidden">
+                <summary className="flex w-full cursor-pointer list-none items-start justify-between gap-3 p-5 font-bold leading-snug marker:content-none sm:p-6 [&::-webkit-details-marker]:hidden">
+                  <span>{item.q}</span>
+                  <ChevronDown className="mt-0.5 h-5 w-5 shrink-0 text-accent transition-transform duration-200 group-open:rotate-180" />
+                </summary>
+                <p className="px-5 pb-5 text-sm leading-relaxed text-muted sm:px-6 sm:pb-6 sm:text-base">{item.a}</p>
+              </details>
+            ))}
           </div>
         </section>
 

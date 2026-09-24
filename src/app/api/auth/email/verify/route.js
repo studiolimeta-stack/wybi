@@ -3,6 +3,7 @@ import { consumeLoginToken, findOrCreateUserByIdentity, safeRedirect } from '../
 import { startSession, claimTestsFromCookie } from '../../../../../lib/session.js';
 import { clientIp, hashIp } from '../../../../../lib/ids.js';
 import { track } from '../../../../../lib/events.js';
+import { readVisitorId } from '../../../../../lib/visitor.js';
 
 export const runtime = 'nodejs';
 
@@ -31,8 +32,13 @@ export async function GET(request) {
   await startSession(user.id, { userAgent: request.headers.get('user-agent'), ipHash });
   const claimed = await claimTestsFromCookie(user.id);
 
-  await track(created ? 'account_created' : 'login_completed', { props: { provider: 'email' } });
-  if (claimed > 0) await track('test_claimed', { props: { count: claimed } });
+  await track(created ? 'account_created' : 'login_completed', {
+    visitorId: await readVisitorId(),
+    props: { provider: 'email' },
+  });
+  if (claimed > 0) {
+    await track('test_claimed', { visitorId: await readVisitorId(), props: { count: claimed } });
+  }
 
   const next = safeRedirect(claimResult.redirect_to);
   return Response.redirect(new URL(next, config.appUrl).toString(), 302);

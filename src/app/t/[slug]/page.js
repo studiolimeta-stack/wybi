@@ -1,3 +1,4 @@
+import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import Script from 'next/script';
@@ -5,9 +6,9 @@ import { OfferCard } from '../../../components/OfferCard.js';
 import { SiteFooter } from '../../../components/SiteChrome.js';
 import { RespondFlow } from './RespondFlow.js';
 import { ShareTestLink } from './ShareTestLink.js';
-import { getTestBySlug, assignPriceVariant, getExistingResponse, publicTestView } from '../../../lib/tests.js';
+import { getTestBySlug, assignPriceVariant, getExistingResponse, publicTestView, publicSlug } from '../../../lib/tests.js';
 import { readVisitorId } from '../../../lib/visitor.js';
-import { track } from '../../../lib/events.js';
+import { track, isBrowserNavigation } from '../../../lib/events.js';
 import { currencySymbol, formatPrice, config } from '../../../lib/config.js';
 
 export const dynamic = 'force-dynamic';
@@ -65,7 +66,20 @@ export default async function RespondentPage({ params }) {
   const variant = await assignPriceVariant(test.id, visitorId);
   const existing = visitorId ? await getExistingResponse(test.id, visitorId) : null;
 
-  await track('respondent_view', { testId: test.id, visitorId });
+  /*
+   * Bot-gated, and this one is not just tidiness: `respondent_view` is the
+   * DENOMINATOR of the "Answer rate" stat the creator sees on /r/[token]
+   * (see getTestViewCount + computeAnswerRate).
+   *
+   * This is the URL people paste into WhatsApp, Slack and X — all of which
+   * fetch it to build a link preview. The proxy hands every one of those
+   * fetches a brand-new visitor cookie, so each unfurl counted as a distinct
+   * human who looked and didn't answer. A creator sharing to three chats
+   * silently lost several points off the answer rate we showed them.
+   */
+  if (isBrowserNavigation(await headers())) {
+    await track('respondent_view', { testId: test.id, visitorId });
+  }
 
   return (
     <>
@@ -89,8 +103,8 @@ export default async function RespondentPage({ params }) {
                 {formatPrice(existing.amount, test.currency, test.billing_type)}. One vote per person keeps
                 the numbers honest.
               </p>
-              <ShareTestLink slug={test.slug} title={test.title} />
-              <Link href={`/create?ref=${encodeURIComponent(test.slug)}`} className="btn btn-primary mt-5 w-full sm:w-auto">
+              <ShareTestLink slug={publicSlug(test)} title={test.title} />
+              <Link href={`/create?ref=${encodeURIComponent(publicSlug(test))}`} className="btn btn-primary mt-5 w-full sm:w-auto">
                 Test your own product
               </Link>
             </div>
@@ -103,7 +117,7 @@ export default async function RespondentPage({ params }) {
              * `publicTestView`. */
             test={publicTestView(test)}
             price={variant.amount}
-            slug={test.slug}
+            slug={publicSlug(test)}
             currencySymbol={currencySymbol(test.currency)}
             askConfidence={test.ask_confidence}
             askSuggestedPrice={test.ask_suggested_price}
@@ -113,7 +127,7 @@ export default async function RespondentPage({ params }) {
 
         <p className="hint mt-8 text-center">
           One response per person helps keep the results reliable.{' '}
-          <Link href={`/report/${test.slug}`} className="underline">
+          <Link href={`/report/${publicSlug(test)}`} className="underline">
             Report this test
           </Link>
         </p>
